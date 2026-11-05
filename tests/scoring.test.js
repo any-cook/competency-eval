@@ -68,15 +68,15 @@ test('バッジ', () => {
   assert.deepStrictEqual(S.badges(items, { 1: 1 }, null), []);
 });
 
-test('呼び名セット: どのセットも5段階でしきい値は共通、切り替えできる', () => {
-  S.SET_NAMES.forEach(n => {
+test('呼び名セット: 5段階のセットはしきい値が共通、切り替えできる', () => {
+  S.SET_NAMES.filter(n => n !== 'level').forEach(n => {
     S.useSet(n);
     assert.strictEqual(S.STAGES.length, 5);
     assert.deepStrictEqual(S.STAGES.map(x => x.min), [0, 1.5, 2.25, 2.85, 3.5]);
     assert.ok(S.TERM);
   });
   S.useSet('curry'); assert.strictEqual(S.stageFor(3).name, 'あじわい');
-  S.useSet('nonexistent'); assert.strictEqual(S.SET_NAME, 'curry');
+  S.useSet('nonexistent'); assert.strictEqual(S.SET_NAME, 'level');
   S.useSet('sodachi');
 });
 
@@ -175,4 +175,28 @@ test('部署の兼務：複数部署の評価項目をまとめる', () => {
   assert.equal(S.itemsForDepts(all, []).length, 0);
   const all3 = S.itemsForDepts(all, ['製造部', '営業部', '経理部']);
   assert.deepEqual(all3.map(i => i.no), [1, 2, 101, 201]);
+});
+
+test('10段階の「レベル」：見習いから、エニクックになくてはならない存在まで', () => {
+  S.useSet('level');
+  assert.strictEqual(S.TERM, 'レベル');
+  assert.strictEqual(S.STAGES.length, 10);
+  assert.deepStrictEqual(S.STAGES.map(x => x.min), [0, 1.3, 1.6, 1.9, 2.2, 2.5, 2.8, 3.1, 3.4, 3.7]);
+  assert.strictEqual(S.STAGES[0].name, '見習い');
+  assert.strictEqual(S.STAGES[9].name, 'エニクックになくてはならない存在');
+  assert.strictEqual(S.STAGES[5].title, 'Lv.6　一人前');
+  assert.ok(S.STAGES.every(x => x.desc && x.msg && x.emoji && x.color));
+  assert.strictEqual(S.stageFor(1.0).name, '見習い');
+  assert.strictEqual(S.stageFor(1.29).name, '見習い');
+  assert.strictEqual(S.stageFor(1.3).name, '新人');
+  assert.strictEqual(S.stageFor(2.5).name, '一人前');
+  assert.strictEqual(S.stageFor(3).name, '頼れる存在'); // 全項目「自立」(3点)
+  assert.strictEqual(S.stageFor(3.69).name, 'みんなの先生');
+  assert.strictEqual(S.stageFor(3.7).name, 'エニクックになくてはならない存在');
+  assert.strictEqual(S.stageFor(4).lv, 10);
+  assert.strictEqual(S.nextStage(3.9, 10).next, null);
+  const n = S.nextStage(2.0, 10); // Lv.4(1.9〜) → Lv.5(2.2)
+  assert.strictEqual(n.current.name, '戦力'); assert.strictEqual(n.next.name, 'もうすぐ一人前');
+  assert.ok(Math.abs(n.remaining - 0.2) < 1e-9);
+  S.useSet('sodachi');
 });

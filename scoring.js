@@ -1,6 +1,6 @@
 /* 採点・育ち（段階）判定・月/期間の計算（画面・Firebaseに依存しない）
  * 点数: 1=要支援(×) 2=補助(△) 3=自立(〇) 4=熟練・指導(◎) / 0=対象外（平均に含めない）/ 未入力=キー無し
- * 段階の呼び名は config.js の stageSet で切り替え（curry / sodachi / akari）。しきい値は共通。
+ * 段階の呼び名は config.js の stageSet で切り替え（level=10段階のレベル[標準] / curry / sodachi / akari=5段階）。
  * 月は日本時間(JST)で数える。ym = 'YYYY-MM'
  */
 (function (root, factory) {
@@ -37,12 +37,30 @@
   // 段階の呼び名セット（min = 平均点がこれ以上でその段階）
   var THRESHOLDS = [0, 1.5, 2.25, 2.85, 3.5];
   var COLORS = ['#b98a5e', '#7bbf6a', '#3fa66b', '#ec7fa0', '#e0a526'];
-  function mk(term, rows) {
+  function mk(term, rows, th, cols, lv) {
+    th = th || THRESHOLDS; cols = cols || COLORS;
     return { term: term, stages: rows.map(function (r, i) {
-      return { id: i + 1, min: THRESHOLDS[i], emoji: r[0], name: r[1], color: COLORS[i], msg: r[2] };
+      return { id: i + 1, min: th[i], emoji: r[0], name: r[1], color: cols[i], msg: r[2], desc: r[3] || '',
+        title: lv ? 'Lv.' + (i + 1) + '　' + r[1] : r[1], lv: lv ? i + 1 : 0 };
     }) };
   }
+  // 10段階（平均点を0.3刻み）：見習い → エニクックになくてはならない存在
+  var TH10 = [0, 1.3, 1.6, 1.9, 2.2, 2.5, 2.8, 3.1, 3.4, 3.7];
+  var COL10 = ['#a8927f', '#8fb06a', '#6fb56a', '#4fae7a', '#3fa6a0', '#4f9bd0', '#7b86e0', '#b36fd6', '#ec6f9a', '#e0a526'];
   var SETS = {
+    // 標準：仕事の力そのものを言葉にした10段階（料理などのたとえは使わない）
+    level: mk('レベル', [
+      ['🔰', '見習い', 'ここからスタートです。教わりながら、一つずつできることを増やしていきましょう。', '教わりながら、見て覚えている'],
+      ['🌱', '新人', 'まわりのサポートを受けながら、着実に力がついています。', '手順を見ながら、作業を進められる'],
+      ['🌿', '準戦力', '補助があれば、通常の作業ができるようになりました。自信をもって次の一歩へ。', '補助があれば、通常の作業ができる'],
+      ['🍀', '戦力', 'かんたんな作業は一人で任せられます。できる仕事が増えています。', 'かんたんな作業は一人でできる'],
+      ['🌳', 'もうすぐ一人前', '通常の作業の半分は一人でできます。一人前まで、あと少しです。', '通常の作業の半分は一人でできる'],
+      ['⭐', '一人前', '通常の作業はほぼ一人でできます。立派な一人前です。', '通常の作業はほぼ一人でできる'],
+      ['🌟', '頼れる存在', '一人で安定してできて、まわりにも頼られています。', '一人で安定してでき、まわりに頼られる'],
+      ['💫', 'チームの柱', '応用もできて、トラブルにも対応できます。チームを支える柱です。', '応用ができ、トラブルにも対応できる'],
+      ['🏅', 'みんなの先生', 'まわりに教え、仕事を引っ張っています。みんなの成長も支えています。', 'まわりに教え、仕事を引っ張れる'],
+      ['👑', 'エニクックになくてはならない存在', 'あなたの力が、エニクックの力そのものです。いつもありがとうございます。', '手本であり、会社になくてはならない力']
+    ], TH10, COL10, true),
     // 案A：植物の育ち
     sodachi: mk('育ち', [
       ['🌰', 'たね', 'ここから育っていく準備ができました。一つずつ、できることを増やしていきましょう。'],
@@ -299,10 +317,10 @@
     monthStatus: monthStatus, streak: streak, goalAchievement: goalAchievement, latestGoalProgress: latestGoalProgress
   };
   api.useSet = function (name) {
-    if (!SETS[name]) name = 'curry';
+    if (!SETS[name]) name = 'level';
     SET_NAME = name; STAGES = SETS[name].stages; TERM = SETS[name].term;
     api.STAGES = STAGES; api.TERM = TERM; api.SET_NAME = name;
   };
-  api.useSet((typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.stageSet) || 'curry');
+  api.useSet((typeof window !== 'undefined' && window.APP_CONFIG && window.APP_CONFIG.stageSet) || 'level');
   return api;
 });

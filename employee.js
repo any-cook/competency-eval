@@ -156,7 +156,7 @@
     html += '<div class="card">' + UI.stageHero(avg, cnt, mgr ? '上司の評価をふまえた、いまの' + TERM() : (ld ? S.monthLabel(ld.ym) + 'の自己評価での、いまの' + TERM() : ''));
     if (mgr && ld) {
       var sAvg = S.average(items, ld.scores), ss = S.stageFor(sAvg);
-      if (ss) html += '<p class="small muted" style="margin:8px 0 0">自己評価（' + S.monthLabel(ld.ym) + '）では ' + ss.emoji + ' ' + esc(ss.name) + '（平均 ' + sAvg.toFixed(2) + '）、上司の評価では ' + stg.emoji + ' ' + esc(stg.name) + '（平均 ' + avg.toFixed(2) + '）でした。</p>';
+      if (ss) html += '<p class="small muted" style="margin:8px 0 0">自己評価（' + S.monthLabel(ld.ym) + '）では ' + ss.emoji + ' ' + esc(ss.title) + '（平均 ' + sAvg.toFixed(2) + '）、上司の評価では ' + stg.emoji + ' ' + esc(stg.title) + '（平均 ' + avg.toFixed(2) + '）でした。</p>';
     } else if (!mgr) {
       html += '<p class="small muted" style="margin:8px 0 0">半年の終わりに上司の評価が公開されると、ここが「上司の評価をふまえた' + esc(TERM()) + '」に変わります。</p>';
     }
@@ -225,7 +225,7 @@
   function celebrate(title, avg) {
     var s = S.stageFor(avg); if (!s) return;
     UI.confetti();
-    UI.modal('<div class="big">' + s.emoji + '</div><h2>' + esc(title) + '</h2><p>いまの' + esc(TERM()) + 'は <b style="color:' + s.color + ';font-size:1.3rem">' + esc(s.name) + '</b></p><p class="muted">' + esc(s.msg) + '</p><button class="btn" data-close>ありがとう！</button>');
+    UI.modal('<div class="big">' + s.emoji + '</div><h2>' + esc(title) + '</h2><p>いまの' + esc(TERM()) + 'は <b style="color:' + s.color + ';font-size:1.3rem">' + esc(s.title) + '</b></p><p class="muted">' + esc(s.msg) + '</p><button class="btn" data-close>ありがとう！</button>');
   }
 
   /* ---------------- 今月の自己評価フォーム ---------------- */
@@ -533,13 +533,13 @@
         var per = S.periodForYm(st.periods, ym), gp = d && d.goalProgress ? Object.keys(d.goalProgress).map(function (k) { return d.goalProgress[k]; }) : [];
         var gavg = gp.length ? Math.round(gp.reduce(function (a, b) { return a + b; }, 0) / gp.length) : null;
         var chip = { submitted: '<span class="chip ok">提出ずみ</span>', draft: '<span class="chip warn">入力中</span>', current: '<span class="chip warn">今月・未入力</span>', missed: '<span class="chip gray">未提出</span>', future: '' }[s];
-        return '<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-size:2rem;width:2.4rem;text-align:center">' + (s === 'missed' && !avg ? '⚠️' : (stg ? stg.emoji : '·')) + '</div><div style="flex:1"><b>' + S.monthLabel(ym, true) + '</b> ' + chip + (stg ? ' <span class="chip">' + esc(stg.name) + '</span>' : '') +
+        return '<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-size:2rem;width:2.4rem;text-align:center">' + (s === 'missed' && !avg ? '⚠️' : (stg ? stg.emoji : '·')) + '</div><div style="flex:1"><b>' + S.monthLabel(ym, true) + '</b> ' + chip + (stg ? ' <span class="chip">' + esc(stg.title) + '</span>' : '') +
           '<div class="small muted">' + (avg != null ? '平均 ' + avg.toFixed(2) : '') + (gavg != null ? '　目標の進み具合 平均 ' + gavg + '%' : '') + (s === 'missed' && !avg ? 'この月は出していません（さかのぼって入力はできません）' : '') + (per ? '' : '　（期間外）') + '</div>' + (rp ? '<div class="letter-mini">💌 ' + esc(rp.reviewer || '上司') + ' さん：' + esc(rp.text) + '</div>' : '') + '</div></div>';
       }).join('') + '</div>';
     var rel = st.mgrList.slice().sort(function (a, b) { return a.period < b.period ? 1 : -1; });
     if (rel.length) html += '<div class="card"><h2>🏅 半年ごとの評価</h2>' + rel.map(function (m) {
       var p = periodObj(m.period), a = S.average(items, m.scores), stg = S.stageFor(a), goals = goalsFor(m.period), ga = S.goalAchievement(goals, m.goalScores);
-      return '<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-size:2.2rem">' + (stg ? stg.emoji : '') + '</div><div><b>' + esc(p ? p.label : m.period) + '</b> ' + (stg ? '<span class="chip">' + esc(stg.name) + '</span>' : '') + '<div class="small muted">上司の評価 平均 ' + (a != null ? a.toFixed(2) : '—') + (ga != null ? '　目標の達成度 ' + ga + '%' : '') + '</div></div></div>';
+      return '<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-size:2.2rem">' + (stg ? stg.emoji : '') + '</div><div><b>' + esc(p ? p.label : m.period) + '</b> ' + (stg ? '<span class="chip">' + esc(stg.title) + '</span>' : '') + '<div class="small muted">上司の評価 平均 ' + (a != null ? a.toFixed(2) : '—') + (ga != null ? '　目標の達成度 ' + ga + '%' : '') + '</div></div></div>';
     }).join('') + '</div>';
     view.innerHTML = html;
   }

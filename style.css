@@ -269,3 +269,10 @@ body.me .dock { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 20px rgba(238, 
 .deptchecks { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; min-width: 190px; }
 .dchk { font-size: .85rem; white-space: nowrap; cursor: pointer; }
 .dchk input { width: auto; margin-right: 2px; }
+
+/* 10段階のレベルの道 */
+.path.many .st { font-size: .66rem; }
+.path.many .st .em { font-size: 1.25rem; }
+.path.many .st.now .em { transform: scale(1.35); }
+.path.many .st:not(:last-child)::after { top: 14px; }
+@media (max-width: 520px) { .path.many .st { font-size: .6rem; } .path.many .st .em { font-size: 1.05rem; } .path.many .st:not(:last-child)::after { top: 12px; } }

@@ -15,7 +15,7 @@
   function targets() { return st.staffList.filter(function (s) { return s.active !== false && itemsOf(s).length; }).sort(function (a, b) { return (S.deptLabel(a) + a.name) < (S.deptLabel(b) + b.name) ? -1 : 1; }); }
   function stageChip(items, scores) {
     var a = S.average(items, scores), s = S.stageFor(a);
-    return s ? s.emoji + ' ' + esc(s.name) + ' <span class="muted small">' + a.toFixed(2) + '</span>' : '<span class="muted">—</span>';
+    return s ? s.emoji + ' ' + esc(s.title) + ' <span class="muted small">' + a.toFixed(2) + '</span>' : '<span class="muted">—</span>';
   }
   function group(list, key) { var m = {}; list.forEach(function (x) { (m[x[key]] = m[x[key]] || []).push(x); }); return m; }
   function mapBy(list) { var m = {}; list.forEach(function (x) { m[x.email] = x; }); return m; }
@@ -144,7 +144,7 @@
       var items = itemsOf(s), docs = docsOf(s.email), lat = latestOf(s.email), mgr = st.mgrMap[s.email], g = st.goalsMap[s.email];
       var sa = lat ? S.average(items, lat.scores) : null, ma = mgr ? S.average(items, mgr.scores) : null;
       return [p.label, s.name, S.deptLabel(s), s.email, docs.filter(function (d) { return d.status === 'submitted'; }).length, elapsed, g ? (g.status === 'fixed' ? '確定' : '下書き') : '未設定',
-        lat ? lat.ym : '', sa == null ? '' : sa.toFixed(2), sa == null ? '' : S.stageFor(sa).name, mgr ? (mgr.released ? '公開済み' : '下書き') : '未評価', ma == null ? '' : ma.toFixed(2), ma == null ? '' : S.stageFor(ma).name,
+        lat ? lat.ym : '', sa == null ? '' : sa.toFixed(2), sa == null ? '' : S.stageFor(sa).title, mgr ? (mgr.released ? '公開済み' : '下書き') : '未評価', ma == null ? '' : ma.toFixed(2), ma == null ? '' : S.stageFor(ma).title,
         mgr && g ? (S.goalAchievement(g.goals, mgr.goalScores) == null ? '' : S.goalAchievement(g.goals, mgr.goalScores)) : ''];
     }));
     var csv = '﻿' + lines.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');

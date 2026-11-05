@@ -50,9 +50,10 @@
 
   /** ステージの道（今どこにいるか） */
   UI.stagePath = function (currentId) {
-    return '<div class="path">' + S.STAGES.map(function (s) {
+    var many = S.STAGES.length > 6;
+    return '<div class="path' + (many ? ' many' : '') + '">' + S.STAGES.map(function (s) {
       var cls = s.id < currentId ? 'done' : (s.id === currentId ? 'now' : '');
-      return '<div class="st ' + cls + '"><span class="em">' + s.emoji + '</span>' + esc(s.name) + '</div>';
+      return '<div class="st ' + cls + '" title="' + esc(s.title) + '"><span class="em">' + s.emoji + '</span>' + (many ? (s.lv ? 'Lv.' + s.lv : esc(s.name)) : esc(s.name)) + '</div>';
     }).join('') + '</div>';
   };
 
@@ -119,12 +120,12 @@
     }
     var nx = S.nextStage(avg, scoredCount), pct = S.percent(avg);
     var next = nx && nx.next
-      ? '<div class="small" style="margin-top:10px">次の「' + nx.next.emoji + ' ' + esc(nx.next.name) + '」まで あと <b>平均 ' + nx.remaining.toFixed(2) + '</b>' +
+      ? '<div class="small" style="margin-top:10px">次の「' + nx.next.emoji + ' ' + esc(nx.next.title) + '」まで あと <b>平均 ' + nx.remaining.toFixed(2) + '</b>' +
         (nx.steps ? '（目安：あと <b>' + nx.steps + '項目</b> を1段階アップ）' : '') + '</div><div class="bar" style="margin-top:6px"><i style="width:' + Math.round(nx.ratio * 100) + '%"></i></div>'
       : '<div class="small" style="margin-top:10px">🎉 いちばん上の' + S.TERM + 'です！これからは、まわりの成長も支える立場に。</div>';
     return '<div class="hero"><div class="big-emoji" aria-hidden="true">' + st.emoji + '</div><div style="flex:1;min-width:0">' +
-      '<div class="stage-label">' + esc(caption) + '</div><p class="stage-name" style="color:' + st.color + '">' + esc(st.name) + '<span class="muted" style="font-size:.85rem;font-weight:600"> ／ 平均 ' + avg.toFixed(2) + '</span></p>' +
-      '<p class="muted" style="margin:0">' + esc(st.msg) + '</p>' + next + '</div>' +
+      '<div class="stage-label">' + esc(caption) + '</div><p class="stage-name" style="color:' + st.color + '">' + esc(st.title) + '<span class="muted" style="font-size:.85rem;font-weight:600"> ／ 平均 ' + avg.toFixed(2) + '</span></p>' +
+      '<p class="muted" style="margin:0">' + esc(st.msg) + '</p>' + (st.desc ? '<p class="small" style="margin:4px 0 0"><b>いまのレベル</b>：' + esc(st.desc) + '</p>' : '') + next + '</div>' +
       '<div class="hide-sm">' + UI.ring(pct, st.color, '習熟度', 108) + '</div></div>';
   };
 

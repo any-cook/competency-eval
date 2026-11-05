@@ -4,11 +4,12 @@
 window.APP_CONFIG = {
   appName: '成長ノート',
   companyName: 'エニクック',
-  // 成長の段階の呼び名（どれか1つ）。しきい値は共通で、画面の言葉だけが変わります。
-  //   'curry'   … 🧅しこみ中 → 🔥いため → 🍲にこみ → 🍛あじわい → ✨看板の味（呼び名「仕上がり」）
-  //   'sodachi' … 🌰たね → 🌱め → 🌿わかば → 🌸はな → 🌾みのり（呼び名「育ち」）
-  //   'akari'   … 🕯️ともしび → 🌙つきあかり → ⭐ほしあかり → 🌟きらめき → ☀️かがやき（呼び名「あかり」）
-  stageSet: 'curry',
+  // 成長の段階の呼び名（どれか1つ）。
+  //   'level'   … 10段階 🔰見習い → … → 👑エニクックになくてはならない存在（標準・呼び名「レベル」）
+  //   'curry'   … 🧅しこみ中 → 🔥いため → 🍲にこみ → 🍛あじわい → ✨看板の味（5段階）
+  //   'sodachi' … 🌰たね → 🌱め → 🌿わかば → 🌸はな → 🌾みのり（5段階）
+  //   'akari'   … 🕯️ともしび → 🌙つきあかり → ⭐ほしあかり → 🌟きらめき → ☀️かがやき（5段階）
+  stageSet: 'level',
   firebase: {
     apiKey: 'AIzaSyCEaskX6wd9cN6AU6dwMCSwLoDvUikmuQE',
     authDomain: 'competency-eval-ebc6f.firebaseapp.com',
