@@ -1,0 +1,14 @@
+{
+  "name": "competency-eval",
+  "private": true,
+  "description": "成長ノート（力量評価システム）",
+  "scripts": {
+    "test": "node --test tests/scoring.test.js",
+    "build:items": "python3 -I tools/build-items.py tools/competency-source.xlsx items-data.js",
+    "test:rules": "npx -y firebase-tools emulators:exec --only firestore --project demo-ce 'node tests/rules.test.js'"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "^12.0.0"
+  }
+}

@@ -1,0 +1,141 @@
+rules_version = '2';
+// 成長ノート Firestore ルール
+//  ・ログインは「メール確認済み」のアカウントのみ（なりすまし防止）
+//  ・名簿(staff)に登録され、有効なメールだけが使える。部署・権限は名簿で決まる
+//  ・月次の自己評価(monthlyEvals)は、サーバー時刻（日本時間）が「その月」のあいだだけ入力・提出できる
+//    → 月が変わると、前の月は入力も提出もできない（さかのぼり不可）。提出後は本人は変更不可
+//  ・半年の目標(goals)は、期間が受付中のあいだだけ。「確定」後は本人は変更不可
+//  ・管理者評価(mgrEvals)は、管理者が「公開」するまで本人は読めない
+//  ・提案ボックス(suggestions)は、社員が新規投稿でき、管理者が状態・返事・公開を決める。公開(public)したものは全社員が読める
+//  ・ひとこと返信(replies)は、管理者だけが書ける（300字まで）。本人は自分宛てを読み、既読(readAt)だけ更新できる
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function staffPath(email) { return /databases/$(database)/documents/staff/$(email); }
+    function isStaff() {
+      return verified() && exists(staffPath(myEmail())) && get(staffPath(myEmail())).data.active == true;
+    }
+    function isAdmin() { return isStaff() && get(staffPath(myEmail())).data.role == 'admin'; }
+    function ownerOf(id) { return id.split('__')[1] == myEmail(); }
+    function periodData(p) { return get(/databases/$(database)/documents/periods/$(p)).data; }
+    function periodOpen(p) { return periodData(p).status == 'open'; }
+
+    // ts が「日本時間の月初 0:00 ちょうど」で、しかもサーバー時刻と同じ年月（= 今月）であること
+    function isThisMonthStart(ts) {
+      let a = ts + duration.value(9, 'h');
+      let n = request.time + duration.value(9, 'h');
+      return a.day() == 1 && a.hours() == 0 && a.minutes() == 0 && a.seconds() == 0
+        && a.year() == n.year() && a.month() == n.month();
+    }
+
+    function validMonthly(id) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['ym', 'period', 'email', 'name', 'dept', 'monthStart', 'scores', 'comments',
+                               'goalProgress', 'goalNotes', 'memo', 'status', 'updatedAt', 'submittedAt'])
+        && d.monthStart is timestamp
+        && isThisMonthStart(d.monthStart)
+        && d.ym == id.split('__')[0]
+        && d.email == myEmail()
+        && d.dept == get(staffPath(myEmail())).data.dept
+        && d.status in ['draft', 'submitted']
+        && periodOpen(d.period)
+        && d.monthStart >= periodData(d.period).startAt
+        && d.monthStart < periodData(d.period).endAt;
+    }
+
+    function validGoals(id) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['period', 'email', 'name', 'dept', 'goals', 'status', 'updatedAt', 'fixedAt'])
+        && d.period == id.split('__')[0]
+        && d.email == myEmail()
+        && d.dept == get(staffPath(myEmail())).data.dept
+        && d.status in ['draft', 'fixed']
+        && d.goals is list && d.goals.size() <= 5
+        && periodOpen(d.period);
+    }
+
+    // 社員名簿：本人は自分の行だけ読める。変更は管理者のみ
+    match /staff/{email} {
+      allow get: if verified() && (email == myEmail() || isAdmin());
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 評価期間（半年）
+    match /periods/{id} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // 月次の自己評価
+    match /monthlyEvals/{id} {
+      allow get: if isAdmin() || (isStaff() && ownerOf(id));
+      allow list: if isAdmin() || (isStaff() && resource.data.email == myEmail());
+      allow create: if isAdmin() || (isStaff() && ownerOf(id) && validMonthly(id));
+      allow update: if isAdmin() || (isStaff() && ownerOf(id)
+                       && resource.data.status != 'submitted'
+                       && resource.data.monthStart == request.resource.data.monthStart
+                       && validMonthly(id));
+      allow delete: if isAdmin();
+    }
+
+    // 半年の目標
+    match /goals/{id} {
+      allow get: if isAdmin() || (isStaff() && ownerOf(id));
+      allow list: if isAdmin() || (isStaff() && resource.data.email == myEmail());
+      allow create: if isAdmin() || (isStaff() && ownerOf(id) && validGoals(id));
+      allow update: if isAdmin() || (isStaff() && ownerOf(id) && resource.data.status != 'fixed' && validGoals(id));
+      allow delete: if isAdmin();
+    }
+
+    // 管理者評価：公開(released=true)されるまで本人は読めない
+    match /mgrEvals/{id} {
+      allow get: if isAdmin() || (isStaff() && ownerOf(id) && resource.data.released == true);
+      allow list: if isAdmin() || (isStaff() && resource.data.email == myEmail() && resource.data.released == true);
+      allow write: if isAdmin();
+    }
+
+    // 提案ボックス：本人は投稿（受付ずみ・返事なし・非公開で）と、自分の提案の閲覧、受付ずみのものの取り下げだけ。
+    // 状態・返事・公開は管理者のみ。公開(public==true)の提案は全社員が読める
+    match /suggestions/{id} {
+      function validNewSug() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['id', 'email', 'name', 'dept', 'anonymous', 'category', 'title', 'body', 'status', 'reply', 'public', 'createdAt', 'updatedAt'])
+          && d.id == id && d.email == myEmail()
+          && d.dept == get(staffPath(myEmail())).data.dept
+          && d.anonymous is bool
+          && d.category in ['仕事のやり方', '設備・道具', '職場の環境', '商品・アイデア', '評価制度へのご意見', 'その他']
+          && d.title is string && d.title.size() >= 1 && d.title.size() <= 60
+          && d.body is string && d.body.size() >= 1 && d.body.size() <= 600
+          && d.status == 'new' && d.reply == '' && d.public == false;
+      }
+      allow get: if isAdmin() || (isStaff() && (resource.data.email == myEmail() || resource.data.public == true));
+      allow list: if isAdmin() || (isStaff() && (resource.data.email == myEmail() || resource.data.public == true));
+      allow create: if isStaff() && validNewSug();
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (isStaff() && resource.data.email == myEmail() && resource.data.status == 'new');
+    }
+
+    // 管理者から毎月のひとこと返信。本人は読むだけ（既読の印 readAt だけ付けられる）
+    match /replies/{id} {
+      function validReply() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['ym', 'period', 'email', 'name', 'text', 'seen', 'reviewer', 'createdAt', 'updatedAt', 'readAt'])
+          && d.text is string && d.text.size() <= 300
+          && d.email is string && d.ym == id.split('__')[0] && d.email == id.split('__')[1];
+      }
+      allow get: if isAdmin() || (isStaff() && ownerOf(id));
+      allow list: if isAdmin() || (isStaff() && resource.data.email == myEmail());
+      allow create: if isAdmin() && validReply();
+      allow update: if (isAdmin() && validReply())
+                    || (isStaff() && ownerOf(id)
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+                        && request.resource.data.readAt is number);
+      allow delete: if isAdmin();
+    }
+  }
+}
