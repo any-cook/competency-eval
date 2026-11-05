@@ -276,3 +276,6 @@ body.me .dock { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 20px rgba(238, 
 .path.many .st.now .em { transform: scale(1.35); }
 .path.many .st:not(:last-child)::after { top: 14px; }
 @media (max-width: 520px) { .path.many .st { font-size: .6rem; } .path.many .st .em { font-size: 1.05rem; } .path.many .st:not(:last-child)::after { top: 12px; } }
+
+.brand .logo { width: 32px; height: 32px; border-radius: 9px; vertical-align: middle; margin: -4px 4px 0 0; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+.login-logo { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 4px 14px rgba(0,0,0,.15); }

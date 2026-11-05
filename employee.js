@@ -53,7 +53,7 @@
     var demo = Store.mode === 'demo';
     app.innerHTML =
       (demo ? '<div class="demo-banner">🧪 デモモード（ダミーデータ・Firebase未接続）　今日＝' + esc(S.monthLabel(st.nowYm, true)) + ' <a href="#" id="reset-demo">デモをリセット</a></div>' : '') +
-      '<header class="site-header"><div class="in"><span class="brand">🌱 ' + esc(window.APP_CONFIG.appName || '成長ノート') + '</span><span class="mode-chip">本人画面</span><span class="spacer"></span>' +
+      '<header class="site-header"><div class="in"><span class="brand"><img class="logo" src="icons/logo.png" alt="" width="32" height="32"> ' + esc(window.APP_CONFIG.appName || '成長ノート') + '</span><span class="mode-chip">本人画面</span><span class="spacer"></span>' +
       '<div class="who">' + esc(st.staff.name) + ' さん<br><span style="opacity:.9">' + esc(S.deptLabel(st.staff) || '部署未設定') + '</span></div>' +
       (st.staff.role === 'admin' ? '<a href="admin.html">管理画面へ</a>' : '') + '<button class="link" id="logout">ログアウト</button></div></header>' +
       '<main class="wrap"><div id="prow" class="row" style="margin-bottom:8px"><label class="f" style="margin:0" for="psel">半年の期間</label>' +

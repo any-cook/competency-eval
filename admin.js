@@ -71,7 +71,7 @@
   function renderShell() {
     app.innerHTML =
       (Store.mode === 'demo' ? '<div class="demo-banner">🧪 デモモード（ダミーデータ・Firebase未接続）　今日＝' + esc(S.monthLabel(st.nowYm, true)) + ' <a href="#" id="reset-demo">デモをリセット</a></div>' : '') +
-      '<header class="site-header"><div class="in"><span class="brand">📋 ' + esc(window.APP_CONFIG.appName || '成長ノート') + '</span><span class="mode-chip">管理画面</span><span class="spacer"></span>' +
+      '<header class="site-header"><div class="in"><span class="brand"><img class="logo" src="icons/logo.png" alt="" width="32" height="32"> ' + esc(window.APP_CONFIG.appName || '成長ノート') + '</span><span class="mode-chip">管理画面</span><span class="spacer"></span>' +
       '<div class="who">' + esc(st.staff.name) + '<br><span style="opacity:.9">管理者</span></div><a href="index.html">本人画面へ</a><button class="link" id="logout">ログアウト</button></div></header>' +
       '<div class="admin-banner">🔒 管理者専用の画面です。ここでの入力は、「公開」するまで本人には見えません。</div>' +
       '<main class="wrap"><div class="tabs" id="tabs"><button class="tab" data-t="list">📊 評価一覧<span class="dot hidden" id="tb-list"></span></button><button class="tab" data-t="ideas">💡 提案<span class="dot hidden" id="tb-ideas"></span></button><button class="tab" data-t="staff">👥 社員名簿</button><button class="tab" data-t="periods">🗓 評価期間</button></div><div id="view"></div></main><div id="dock-slot"></div>';

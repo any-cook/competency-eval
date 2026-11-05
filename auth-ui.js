@@ -35,7 +35,7 @@
       root.innerHTML = '<div class="login card">' + inner + '</div>';
     }
     function logoBlock(title, sub) {
-      return '<div class="hero-emoji">' + (opt.admin ? '📋' : '🌱') + '</div><h1>' + esc(cfg.appName || '成長ノート') + '</h1>' +
+      return '<div class="hero-emoji"><img class="login-logo" src="icons/icon-192.png" alt="" width="96" height="96"></div><h1>' + esc(cfg.appName || '成長ノート') + '</h1>' +
         '<p class="muted" style="text-align:center;margin-top:-6px">' + esc(title) + (sub ? '<br>' + esc(sub) : '') + '</p>';
     }
 
