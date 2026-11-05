@@ -54,7 +54,7 @@
     app.innerHTML =
       (demo ? '<div class="demo-banner">🧪 デモモード（ダミーデータ・Firebase未接続）　今日＝' + esc(S.monthLabel(st.nowYm, true)) + ' <a href="#" id="reset-demo">デモをリセット</a></div>' : '') +
       '<header class="site-header"><div class="in"><span class="brand">🌱 ' + esc(window.APP_CONFIG.appName || '成長ノート') + '</span><span class="mode-chip">本人画面</span><span class="spacer"></span>' +
-      '<div class="who">' + esc(st.staff.name) + ' さん<br><span style="opacity:.9">' + esc(st.staff.dept || '部署未設定') + '</span></div>' +
+      '<div class="who">' + esc(st.staff.name) + ' さん<br><span style="opacity:.9">' + esc(S.deptLabel(st.staff) || '部署未設定') + '</span></div>' +
       (st.staff.role === 'admin' ? '<a href="admin.html">管理画面へ</a>' : '') + '<button class="link" id="logout">ログアウト</button></div></header>' +
       '<main class="wrap"><div id="prow" class="row" style="margin-bottom:8px"><label class="f" style="margin:0" for="psel">半年の期間</label>' +
       '<select id="psel" style="width:auto;min-width:200px">' + st.periods.map(function (p) {
@@ -112,7 +112,7 @@
     document.getElementById('dock-slot').innerHTML = '';
     var vw = document.getElementById('view'); vw.onclick = null; vw.oninput = null;
     if (st.tab === 'ideas') { renderIdeas(); return; }
-    if (!st.items.length) { vw.innerHTML = '<div class="card">あなたの部署（' + esc(st.staff.dept || '未設定') + '）の評価表がまだありません。管理者にご確認ください。</div>'; return; }
+    if (!st.items.length) { vw.innerHTML = '<div class="card">あなたの部署（' + esc(S.deptLabel(st.staff) || '未設定') + '）の評価表がまだありません。管理者にご確認ください。</div>'; return; }
     if (!st.periods.length) { vw.innerHTML = '<div class="card">評価期間がまだ作られていません。管理者が期間を作成すると、ここから始められます。</div>'; return; }
     ({ home: renderHome, form: renderForm, goals: renderGoals, history: renderHistory }[st.tab || 'home'])();
     var gf = document.getElementById('go-form'); if (gf) gf.onclick = function () { st.tab = 'form'; render(); window.scrollTo(0, 0); };
@@ -236,7 +236,7 @@
     if (!cp) { view.innerHTML = html; return; }
     if (cp.status !== 'open') html += '<div class="msg info">この期間は受付が終了しています。</div>';
 
-    html += '<div class="card"><h2>✏️ ' + esc(S.monthLabel(st.nowYm, true)) + 'の力量評価（' + esc(st.staff.dept) + '）</h2>' +
+    html += '<div class="card"><h2>✏️ ' + esc(S.monthLabel(st.nowYm, true)) + 'の力量評価（' + esc(S.deptLabel(st.staff)) + '）</h2>' +
       '<p class="muted" style="margin:0">今の自分に一番近いものを選んでください。正解はありません。「できるようになったこと」を見つけるつもりで、ゆっくりどうぞ。</p>' +
       '<details style="margin-top:10px"><summary style="cursor:pointer;color:var(--pri-d);font-weight:700">評価の基準を見る</summary><div style="margin-top:8px">' +
       S.LEVELS.map(function (l) { return '<p style="margin:6px 0"><b>' + l.mark + ' ' + l.name + '（' + l.score + '点）</b>：' + esc(l.short) + '<br><span class="muted small">' + esc(l.original) + '</span></p>'; }).join('') +
@@ -264,7 +264,7 @@
       html += '<details class="cat"' + (ci === 0 || !ed ? ' open' : '') + ' data-cat="' + esc(c) + '"><summary>' + esc(c) + '<span class="cnt" data-cnt></span></summary>' +
         map[c].map(function (it) {
           var v = doc.scores[it.no], cm = doc.comments[it.no] || '';
-          return '<div class="item" data-no="' + it.no + '"><div><span class="no">' + it.no + '</span><span class="ttl">' + esc(it.name) + '</span></div>' +
+          return '<div class="item" data-no="' + it.no + '"><div><span class="no">' + (it.dispNo || it.no) + '</span><span class="ttl">' + esc(it.name) + '</span></div>' +
             '<div class="crit">' + esc(it.criteria) + '</div>' +
             '<div class="lv">' + S.LEVELS.map(function (l) {
               return '<button type="button" data-s="' + l.score + '" class="' + (v === l.score ? 'on' : '') + '"' + (ed ? '' : ' disabled') + ' title="' + esc(l.short) + '"><span class="mk">' + l.mark + '</span><span class="nm">' + l.name + '</span></button>';
@@ -483,8 +483,6 @@
       '<div class="card"><h2>✍️ 新しく書く</h2><label class="f">どんなこと？</label><div class="cats" id="sg-cats">' + S.SUG_CATS.map(function (c, i) { return '<button type="button" class="catbtn' + (i === 0 ? ' on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>' +
       '<label class="f" for="sg-title">ひとことで言うと（' + S.SUG_TITLE_MAX + '字まで）</label><input type="text" id="sg-title" maxlength="' + S.SUG_TITLE_MAX + '" placeholder="例）充填機の洗浄手順を写真つきにしたい">' +
       '<label class="f" for="sg-body">くわしく（' + S.SUG_BODY_MAX + '字まで）</label><textarea id="sg-body" maxlength="' + S.SUG_BODY_MAX + '" rows="4" placeholder="困っていること、こうしたらよくなると思うこと、など"></textarea><div class="small muted" style="text-align:right"><span id="sg-n">0</span> / ' + S.SUG_BODY_MAX + '</div>' +
-      '<label class="row small" style="margin-top:6px;gap:6px"><input type="checkbox" id="sg-anon"> 管理画面に名前を出さずに送る（匿名）</label>' +
-      '<p class="small muted" style="margin:4px 0 0">※匿名にすると、管理画面には名前が表示されません。ただし少人数なので、内容から分かることもあります。</p>' +
       '<p style="margin:10px 0 0;text-align:right"><button class="btn" id="sg-send">💌 送る</button></p></div>';
     html += '<div class="card"><h2>📮 自分の提案と返事</h2>' + (mine.length ? mine.map(function (x) {
       return '<div class="sug" data-id="' + esc(x.id) + '"><div class="row"><b style="flex:1">' + esc(x.title) + '</b>' + sugBadge(x) + '</div><div class="muted small">' + esc(x.category) + (x.anonymous ? '・匿名' : '') + '</div>' +
@@ -512,7 +510,7 @@
         if (!title) return UI.toast('「ひとことで言うと」を入力してください');
         if (!body) return UI.toast('「くわしく」を入力してください');
         var id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), now = Date.now();
-        var data = { id: id, email: st.user.email, name: st.staff.name, dept: st.staff.dept || '', anonymous: document.getElementById('sg-anon').checked, category: cat, title: title, body: body, status: 'new', reply: '', public: false, createdAt: now, updatedAt: now };
+        var data = { id: id, email: st.user.email, name: st.staff.name, dept: st.staff.dept || '', anonymous: false, category: cat, title: title, body: body, status: 'new', reply: '', public: false, createdAt: now, updatedAt: now };
         var btn = document.getElementById('sg-send'); btn.disabled = true;
         try { await Store.saveSuggestion(id, data); st.sugMine.push(data); UI.confetti(); UI.toast('💌 送りました。ありがとうございます！'); renderIdeas(); window.scrollTo(0, 0); }
         catch (er) { btn.disabled = false; UI.toast('送れませんでした：' + window.AuthUI.errText(er)); }
@@ -550,7 +548,7 @@
   window.AuthUI.start({
     root: 'app', admin: false,
     onReady: async function (user, staff) {
-      st = { user: user, staff: staff, items: (window.COMPETENCY_ITEMS[staff.dept] || []), tab: 'home' };
+      st = { user: user, staff: staff, items: S.itemsForDepts(window.COMPETENCY_ITEMS, S.deptsOf(staff)), tab: 'home' };
       try { await load(); renderShell(); render(); }
       catch (e) { app.innerHTML = '<div class="wrap"><div class="msg err">読み込みに失敗しました：' + esc(window.AuthUI.errText(e)) + '</div><button class="btn gray" onclick="location.reload()">再読み込み</button></div>'; }
     }

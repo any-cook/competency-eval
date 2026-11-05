@@ -254,6 +254,25 @@
     return !!String(doc.memo || '').trim() || any(doc.comments) || any(doc.goalNotes);
   }
   var REPLY_MAX = 300;
+  /* ---- 部署（兼務に対応：1人が複数の部署を持てる） ---- */
+  /** 社員の部署の一覧。depts があればそれ、なければ dept（1つ）から作る */
+  function deptsOf(staff) {
+    var a = staff && Array.isArray(staff.depts) ? staff.depts.filter(Boolean) : [];
+    if (!a.length && staff && staff.dept) a = [staff.dept];
+    return a;
+  }
+  function deptLabel(staff) { return deptsOf(staff).join('・'); }
+  /** 部署の評価項目をまとめる。項目番号は部署ごとに100ずつずらして重ならないようにする（製造0・営業100・経理200）。表示用の番号は dispNo */
+  function itemsForDepts(all, depts) {
+    var order = Object.keys(all || {}), multi = (depts || []).length > 1, out = [];
+    order.forEach(function (d, i) {
+      if (depts.indexOf(d) < 0) return;
+      (all[d] || []).forEach(function (it) {
+        out.push(Object.assign({}, it, { dept: d, dispNo: it.no, no: it.no + i * 100, cat: multi ? d + '／' + it.cat : it.cat }));
+      });
+    });
+    return out;
+  }
   // 提案ボックス
   var SUG_CATS = ['仕事のやり方', '設備・道具', '職場の環境', '商品・アイデア', '評価制度へのご意見', 'その他'];
   var SUG_STATUS = [
@@ -275,7 +294,7 @@
     nowMs: nowMs, ymOf: ymOf, nowYm: nowYm, ymStartMs: ymStartMs, addMonths: addMonths, monthRange: monthRange,
     monthLabel: monthLabel, lastDay: lastDay, daysLeftInMonth: daysLeftInMonth, periodForYm: periodForYm,
     greeting: greeting, seasonEmoji: seasonEmoji, dailyMessage: dailyMessage, givenName: givenName, cleanReviewer: cleanReviewer,
-    hasWriting: hasWriting, REPLY_MAX: REPLY_MAX, DAILY: DAILY,
+    hasWriting: hasWriting, REPLY_MAX: REPLY_MAX, DAILY: DAILY, deptsOf: deptsOf, deptLabel: deptLabel, itemsForDepts: itemsForDepts,
     SUG_CATS: SUG_CATS, SUG_STATUS: SUG_STATUS, SUG_TITLE_MAX: SUG_TITLE_MAX, SUG_BODY_MAX: SUG_BODY_MAX, sugStatus: sugStatus,
     monthStatus: monthStatus, streak: streak, goalAchievement: goalAchievement, latestGoalProgress: latestGoalProgress
   };

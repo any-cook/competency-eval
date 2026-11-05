@@ -88,7 +88,8 @@
     listStaff: async function () { return mapDocs(await db.collection('staff').get()); },
     saveStaff: function (st) {
       var email = lower(st.email);
-      return db.collection('staff').doc(email).set({ email: email, name: st.name || '', dept: st.dept || '', role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
+      var depts = S.deptsOf(st);
+      return db.collection('staff').doc(email).set({ email: email, name: st.name || '', dept: depts[0] || '', depts: depts, role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
     },
 
     listPeriods: async function () {
@@ -158,7 +159,7 @@
     var monthly = {}, goals = {}, mgr = {};
     function scoresFor(dept, seed, base, t) {
       var r = rng(seed), sc = {};
-      items[dept].forEach(function (it) { sc[it.no] = Math.max(1, Math.min(4, Math.round(base + 0.1 * t + (r() - 0.5) * 2.0))); });
+      S.itemsForDepts(items, [dept]).forEach(function (it) { sc[it.no] = Math.max(1, Math.min(4, Math.round(base + 0.1 * t + (r() - 0.5) * 2.0))); });
       return sc;
     }
     function addMonthly(staffRec, period, ym, sc, prog, t) {
@@ -211,7 +212,7 @@
     sug('s-demo1', hanako, '仕事のやり方', '充填機の洗浄手順を写真つきにしたい', '新しく入った人が手順書だけだと迷いやすいので、洗浄の手順を写真つきで貼ると分かりやすいと思います。', 'adopted',
       'ありがとう！さっそく来月から、充填機のそばに写真つきの手順表を貼ります。撮影を手伝ってもらえますか？', true, false, 30);
     sug('s-demo2', taro, '設備・道具', '計量スプーンの置き場所がほしい', '計量スプーンがいつも別の場所にあって探す時間がもったいないです。', 'reading', '置き場所を相談してみますね。もう少しお待ちください。', false, false, 31);
-    sug('s-demo3', staff[3], '職場の環境', '休憩室のイスを増やしたい', '昼休みにイスが足りない日があります。', 'new', '', false, true, 32);
+    sug('s-demo3', staff[3], '職場の環境', '休憩室のイスを増やしたい', '昼休みにイスが足りない日があります。', 'new', '', false, false, 32);
     return { staff: staff, periods: [prev, cur], monthly: monthly, goals: goals, mgr: mgr, replies: replies, suggestions: suggestions };
   }
 
@@ -244,7 +245,8 @@
     saveStaff: async function (st) {
       var d = dload(), email = lower(st.email);
       d.staff = d.staff.filter(function (s) { return s.email !== email; });
-      d.staff.push({ email: email, name: st.name || '', dept: st.dept || '', role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
+      var depts = S.deptsOf(st);
+      d.staff.push({ email: email, name: st.name || '', dept: depts[0] || '', depts: depts, role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
       dsave(d);
     },
     listPeriods: async function () { return clone(dload().periods).sort(function (a, b) { return a.id < b.id ? 1 : -1; }); },

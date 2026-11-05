@@ -266,3 +266,6 @@ body.me .dock { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 20px rgba(238, 
 .idea-note { border: 2px solid #ffd77a !important; background: #fff9e6; }
 .idea-cta { background: linear-gradient(135deg, #fff, #fff6f9); }
 .sug-a h3 { font-size: 1.05rem; }
+.deptchecks { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; min-width: 190px; }
+.dchk { font-size: .85rem; white-space: nowrap; cursor: pointer; }
+.dchk input { width: auto; margin-right: 2px; }

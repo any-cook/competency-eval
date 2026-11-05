@@ -7,12 +7,12 @@
   var saveTimer = null;
   var TERM = function () { return S.TERM; };
 
-  function itemsOf(dept) { return window.COMPETENCY_ITEMS[dept] || []; }
+  function itemsOf(staffRec) { return S.itemsForDepts(window.COMPETENCY_ITEMS, S.deptsOf(staffRec)); }
   function periodObj(id) { return st.periods.filter(function (p) { return p.id === id; })[0]; }
   function hasScores(d) { return d && Object.keys(d.scores || {}).some(function (k) { return S.isScored(d.scores[k]); }); }
   function docsOf(email) { return (st.monthlyMap[email] || []).slice().sort(function (a, b) { return a.ym < b.ym ? -1 : 1; }); }
   function latestOf(email) { var l = docsOf(email).filter(hasScores); return l[l.length - 1] || null; }
-  function targets() { return st.staffList.filter(function (s) { return s.active !== false && itemsOf(s.dept).length; }).sort(function (a, b) { return (a.dept + a.name) < (b.dept + b.name) ? -1 : 1; }); }
+  function targets() { return st.staffList.filter(function (s) { return s.active !== false && itemsOf(s).length; }).sort(function (a, b) { return (S.deptLabel(a) + a.name) < (S.deptLabel(b) + b.name) ? -1 : 1; }); }
   function stageChip(items, scores) {
     var a = S.average(items, scores), s = S.stageFor(a);
     return s ? s.emoji + ' ' + esc(s.name) + ' <span class="muted small">' + a.toFixed(2) + '</span>' : '<span class="muted">—</span>';
@@ -47,7 +47,7 @@
       '<p class="muted small" style="margin-top:0">自己評価が提出されると、ここに出ます。ひとこと返す（または「確認した」を押す）と消えます。</p>' +
       list.slice(0, 8).map(function (x) {
         var wr = writingOf(x.d);
-        return '<div class="nitem" data-open="' + esc(x.s.email) + '" data-ym="' + x.d.ym + '"><div class="nh"><b>' + esc(x.s.name) + '</b> <span class="chip">' + esc(x.s.dept) + '</span> <span class="small">' + S.monthLabel(x.d.ym) + '分を提出</span>' +
+        return '<div class="nitem" data-open="' + esc(x.s.email) + '" data-ym="' + x.d.ym + '"><div class="nh"><b>' + esc(x.s.name) + '</b> <span class="chip">' + esc(S.deptLabel(x.s)) + '</span> <span class="small">' + S.monthLabel(x.d.ym) + '分を提出</span>' +
           (x.d.submittedAt ? ' <span class="muted small">（' + fmtDay(x.d.submittedAt) + '）</span>' : '') + (x.writing ? ' <span class="chip warn">💬 記載あり</span>' : '') + '</div>' +
           (wr.length ? '<div class="nq">「' + esc(snippet(wr[0].t, 60)) + '」</div>' : '') + '<span class="btn small">返事を書く</span></div>';
       }).join('') + (list.length > 8 ? '<p class="muted small" style="margin:8px 0 0">ほか ' + (list.length - 8) + '件（社員を開くと表示されます）</p>' : '') + sugLine + '</div>';
@@ -107,7 +107,7 @@
     var elapsed = months.filter(function (ym) { return ym <= st.nowYm; }).length;
     var nNow = 0, nGoal = 0, nMgr = 0, nRel = 0;
     var rows = list.map(function (s) {
-      var items = itemsOf(s.dept), docs = docsOf(s.email), g = st.goalsMap[s.email], mgr = st.mgrMap[s.email], lat = latestOf(s.email);
+      var items = itemsOf(s), docs = docsOf(s.email), g = st.goalsMap[s.email], mgr = st.mgrMap[s.email], lat = latestOf(s.email);
       var sub = docs.filter(function (d) { return d.status === 'submitted'; }).length, nowDoc = docs.filter(function (d) { return d.ym === st.nowYm; })[0];
       var mp = S.progress(items, mgr && mgr.scores);
       if (nowDoc && nowDoc.status === 'submitted') nNow++;
@@ -117,7 +117,7 @@
       var nowChip = !inPeriod ? '<span class="muted">—</span>' : (nowDoc && nowDoc.status === 'submitted' ? '<span class="chip ok">提出済み</span>' + (st.repMap[s.email + '|' + st.nowYm] ? ' <span class="chip">💌返信ずみ</span>' : ' <span class="chip warn">返事待ち</span>') : (nowDoc && hasScores(nowDoc) ? '<span class="chip warn">入力中</span>' : '<span class="chip gray">未提出</span>'));
       var gChip = !g ? '<span class="chip gray">未設定</span>' : (g.status === 'fixed' ? '<span class="chip ok">確定 ' + g.goals.length + '件</span>' : '<span class="chip warn">下書き</span>');
       var mChip = !mgr ? '<span class="chip gray">未評価</span>' : (mgr.released ? '<span class="chip ok">公開済み</span>' : '<span class="chip warn">下書き ' + mp.answered + '/' + mp.total + '</span>');
-      return '<tr class="click" data-email="' + esc(s.email) + '"><td><b>' + esc(s.name) + '</b><div class="muted small">' + esc(s.email) + '</div></td><td>' + esc(s.dept) + '</td><td>' + nowChip + '</td>' +
+      return '<tr class="click" data-email="' + esc(s.email) + '"><td><b>' + esc(s.name) + '</b><div class="muted small">' + esc(s.email) + '</div></td><td>' + esc(S.deptLabel(s)) + '</td><td>' + nowChip + '</td>' +
         '<td>' + sub + ' / ' + elapsed + '<div class="muted small">提出月数</div></td><td>' + gChip + '</td><td>' + (lat ? stageChip(items, lat.scores) + '<div class="muted small">' + S.monthLabel(lat.ym) + '分</div>' : '—') + '</td>' +
         '<td>' + mChip + '</td><td>' + (mgr && mgr.released ? stageChip(items, mgr.scores) : '—') + '</td><td><button class="btn small">評価する</button></td></tr>';
     });
@@ -141,9 +141,9 @@
     var p = periodObj(st.period), months = S.monthRange(p.startYm, p.endYm), elapsed = months.filter(function (ym) { return ym <= st.nowYm; }).length;
     var head = ['期間', '氏名', '部署', 'メール', '提出月数', '対象月数', '目標の状態', '最新の自己評価(月)', '自己平均', '自己' + TERM(), '管理者評価状況', '管理者平均', '管理者' + TERM(), '目標の達成度(%)'];
     var lines = [head].concat(targets().map(function (s) {
-      var items = itemsOf(s.dept), docs = docsOf(s.email), lat = latestOf(s.email), mgr = st.mgrMap[s.email], g = st.goalsMap[s.email];
+      var items = itemsOf(s), docs = docsOf(s.email), lat = latestOf(s.email), mgr = st.mgrMap[s.email], g = st.goalsMap[s.email];
       var sa = lat ? S.average(items, lat.scores) : null, ma = mgr ? S.average(items, mgr.scores) : null;
-      return [p.label, s.name, s.dept, s.email, docs.filter(function (d) { return d.status === 'submitted'; }).length, elapsed, g ? (g.status === 'fixed' ? '確定' : '下書き') : '未設定',
+      return [p.label, s.name, S.deptLabel(s), s.email, docs.filter(function (d) { return d.status === 'submitted'; }).length, elapsed, g ? (g.status === 'fixed' ? '確定' : '下書き') : '未設定',
         lat ? lat.ym : '', sa == null ? '' : sa.toFixed(2), sa == null ? '' : S.stageFor(sa).name, mgr ? (mgr.released ? '公開済み' : '下書き') : '未評価', ma == null ? '' : ma.toFixed(2), ma == null ? '' : S.stageFor(ma).name,
         mgr && g ? (S.goalAchievement(g.goals, mgr.goalScores) == null ? '' : S.goalAchievement(g.goals, mgr.goalScores)) : ''];
     }));
@@ -156,11 +156,11 @@
   function renderDetail() {
     var v = document.getElementById('view'), email = st.detail, p = periodObj(st.period);
     var s = st.staffList.filter(function (x) { return x.email === email; })[0];
-    var items = itemsOf(s.dept), docs = docsOf(email), goalDoc = st.goalsMap[email] || null, goals = goalDoc ? goalDoc.goals : [];
+    var items = itemsOf(s), docs = docsOf(email), goalDoc = st.goalsMap[email] || null, goals = goalDoc ? goalDoc.goals : [];
     var withScores = docs.filter(hasScores);
     var cmp = (st.cmpYm && docs.filter(function (d) { return d.ym === st.cmpYm; })[0]) || withScores[withScores.length - 1] || null;
     var sc = cmp ? cmp.scores || {} : {}, scm = cmp ? cmp.comments || {} : {};
-    var m = st.mgrMap[email] ? JSON.parse(JSON.stringify(st.mgrMap[email])) : { period: st.period, email: email, dept: s.dept, scores: {}, comments: {}, goalScores: {}, goalComments: {}, overall: '', released: false, reviewer: st.staff.name };
+    var m = st.mgrMap[email] ? JSON.parse(JSON.stringify(st.mgrMap[email])) : { period: st.period, email: email, dept: s.dept || '', scores: {}, comments: {}, goalScores: {}, goalComments: {}, overall: '', released: false, reviewer: st.staff.name };
     ['scores', 'comments', 'goalScores', 'goalComments'].forEach(function (k) { m[k] = m[k] || {}; });
     st.work = m; st.workItems = items; st.workGoals = goals;
 
@@ -169,7 +169,7 @@
     var months = S.monthRange(p.startYm, p.endYm);
 
     st.repStaff = s; st.repDocs = docs; st.repItems = items;
-    var html = '<div class="row" style="margin-bottom:10px"><button class="btn gray small" id="back">← 一覧にもどる</button><h2 style="margin:0">' + esc(s.name) + ' <span class="chip">' + esc(s.dept) + '</span></h2><span class="chip">' + esc(p.label) + '</span><span id="rel-chip"></span></div>' +
+    var html = '<div class="row" style="margin-bottom:10px"><button class="btn gray small" id="back">← 一覧にもどる</button><h2 style="margin:0">' + esc(s.name) + ' <span class="chip">' + esc(S.deptLabel(s)) + '</span></h2><span class="chip">' + esc(p.label) + '</span><span id="rel-chip"></span></div>' +
       '<div class="card"><h2>📅 毎月の自己評価の提出状況</h2><div class="months">' + months.map(function (ym) {
         var d = docs.filter(function (x) { return x.ym === ym; })[0], stt = S.monthStatus(ym, st.nowYm, d), a = d && hasScores(d) ? S.average(items, d.scores) : null;
         var icon = { submitted: '✅', draft: '📝', current: '✏️', missed: '⚠️', future: '🔒' }[stt], txt = { submitted: '提出ずみ', draft: '入力中', current: '今月・未', missed: '未提出', future: '' }[stt];
@@ -197,7 +197,7 @@
       html += '<tr class="catrow"><td colspan="7">' + esc(c) + '</td></tr>';
       map[c].forEach(function (it) {
         var sv = sc[it.no], mv = m.scores[it.no];
-        html += '<tr data-no="' + it.no + '"><td>' + it.no + '</td><td><b>' + esc(it.name) + '</b><details><summary class="muted small" style="cursor:pointer">評価基準</summary><div class="small muted">' + esc(it.criteria) + '</div></details></td>' +
+        html += '<tr data-no="' + it.no + '"><td>' + (it.dispNo || it.no) + '</td><td><b>' + esc(it.name) + '</b><details><summary class="muted small" style="cursor:pointer">評価基準</summary><div class="small muted">' + esc(it.criteria) + '</div></details></td>' +
           '<td class="sc">' + (sv >= 1 ? S.LEVELS[sv - 1].mark + '<div class="muted small">' + sv + '</div>' : (sv === 0 ? '<span class="muted small">対象外</span>' : '<span class="muted">—</span>')) + '</td>' +
           '<td><div class="mini-lv">' + [1, 2, 3, 4, 0].map(function (n) { return '<button type="button" data-s="' + n + '" class="' + (mv === n ? 'on' : '') + '" title="' + (n ? S.LEVELS[n - 1].name : '対象外') + '">' + (n ? n : '–') + '</button>'; }).join('') + '</div></td>' +
           '<td class="sc" data-gap></td><td class="small">' + esc(scm[it.no] || '') + '</td><td><input type="text" data-mc value="' + esc(m.comments[it.no] || '') + '" placeholder="任意"></td></tr>';
@@ -263,7 +263,7 @@
     return '<div class="rep" data-ym="' + d.ym + '"><div class="row"><b>' + S.monthLabel(d.ym, true) + '分</b>' + status + (a != null ? '<span class="muted small">平均 ' + a.toFixed(2) + '</span>' : '') + '</div>' +
       (wr.length ? wr.map(function (w) { return '<div class="rq"><span class="rk">' + esc(w.k) + '</span>' + esc(w.t) + '</div>'; }).join('') : '<div class="muted small">本人のひとこと：なし</div>') +
       (cm.length ? '<details><summary class="muted small" style="cursor:pointer">項目コメント ' + cm.length + '件</summary>' + cm.map(function (k) {
-        var it = st.repItems.filter(function (i) { return String(i.no) === k; })[0]; return '<div class="small"><b>' + k + ' ' + esc(it ? it.name : '') + '</b>：' + esc(d.comments[k]) + '</div>'; }).join('') + '</details>' : '') +
+        var it = st.repItems.filter(function (i) { return String(i.no) === k; })[0]; return '<div class="small"><b>' + (it ? (it.dispNo || it.no) : k) + ' ' + esc(it ? it.name : '') + '</b>：' + esc(d.comments[k]) + '</div>'; }).join('') + '</details>' : '') +
       '<textarea data-rtext maxlength="' + S.REPLY_MAX + '" rows="2" placeholder="例）' + S.monthLabel(d.ym) + 'もありがとう。◯◯が上手になってきましたね。">' + esc(r ? r.text || '' : '') + '</textarea>' +
       '<div class="row" style="margin-top:6px"><span class="stamps">' + STAMPS.map(function (t, i) { return '<button type="button" class="stamp" data-stamp="' + i + '">' + esc(t) + '</button>'; }).join('') + '</span><span class="spacer"></span>' +
       '<button type="button" class="btn sub small" data-rseen>' + (r && !r.text ? '確認ずみ' : '返信なしで確認した') + '</button><button type="button" class="btn small" data-rsave>' + (r && r.text ? '書き直して送る' : '送る') + '</button></div></div>';
@@ -369,20 +369,23 @@
     function row(s, isNew) {
       return '<tr data-new="' + (isNew ? 1 : 0) + '"><td>' + (isNew ? '<input type="email" data-f="email" placeholder="name@example.com">' : '<span data-f="email">' + esc(s.email) + '</span>') + '</td>' +
         '<td><input type="text" data-f="name" value="' + esc(s.name || '') + '" placeholder="氏名"></td>' +
-        '<td><select data-f="dept"><option value="">（評価なし）</option>' + DEPTS.map(function (d) { return '<option' + (s.dept === d ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></td>' +
+        '<td><div class="deptchecks" data-f="depts">' + DEPTS.map(function (d) { return '<label class="dchk"><input type="checkbox" data-dept="' + esc(d) + '"' + (S.deptsOf(s).indexOf(d) >= 0 ? ' checked' : '') + '> ' + esc(d) + '</label>'; }).join('') +
+        '<button type="button" class="stamp" data-alld>全部署</button><button type="button" class="stamp" data-nod>なし</button></div></td>' +
         '<td><select data-f="role"><option value="employee"' + (s.role !== 'admin' ? ' selected' : '') + '>一般</option><option value="admin"' + (s.role === 'admin' ? ' selected' : '') + '>管理者</option></select></td>' +
         '<td style="text-align:center"><input type="checkbox" data-f="active"' + (s.active !== false ? ' checked' : '') + '></td><td><button class="btn small" data-save>' + (isNew ? '追加' : '保存') + '</button></td></tr>';
     }
-    v.innerHTML = '<div class="card"><h2>👥 社員名簿</h2><p class="muted small">ここに登録したメールアドレスで本人がログインすると、<b>部署の評価表</b>が自動で出ます。メールアドレスは本人がログインに使うものと同じにしてください。<br>退職・休職などは「有効」のチェックを外すと、ログインできなくなります（評価データは残ります）。</p>' +
-      '<div class="tbl-wrap"><table><thead><tr><th>メールアドレス</th><th>氏名</th><th>部署</th><th>権限</th><th>有効</th><th></th></tr></thead><tbody>' +
+    v.innerHTML = '<div class="card"><h2>👥 社員名簿</h2><p class="muted small">ここに登録したメールアドレスで本人がログインすると、<b>部署の評価表</b>が自動で出ます。兼務の人は、部署を<b>複数</b>チェックしてください（評価表が1つにまとまって出ます）。「全部署」ボタンで、すべての部署をまとめて選べます。メールアドレスは本人がログインに使うものと同じにしてください。<br>退職・休職などは「有効」のチェックを外すと、ログインできなくなります（評価データは残ります）。</p>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>メールアドレス</th><th>氏名</th><th>部署（兼務は複数）</th><th>権限</th><th>有効</th><th></th></tr></thead><tbody>' +
       row({ role: 'employee' }, true) + st.staffList.sort(function (a, b) { return a.email < b.email ? -1 : 1; }).map(function (s) { return row(s, false); }).join('') + '</tbody></table></div></div>';
     v.onclick = async function (e) {
+      var all = e.target.closest('[data-alld]'), none = e.target.closest('[data-nod]');
+      if (all || none) { (all || none).closest('.deptchecks').querySelectorAll('[data-dept]').forEach(function (c) { c.checked = !!all; }); return; }
       var b = e.target.closest('[data-save]'); if (!b) return;
       var tr = b.closest('tr'), g = function (f) { return tr.querySelector('[data-f="' + f + '"]'); };
       var isNew = tr.dataset.new === '1', email = String(isNew ? g('email').value : g('email').textContent).trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return UI.toast('メールアドレスを正しく入力してください');
       if (!g('name').value.trim()) return UI.toast('氏名を入力してください');
-      var rec = { email: email, name: g('name').value.trim(), dept: g('dept').value, role: g('role').value, active: g('active').checked };
+      var rec = { email: email, name: g('name').value.trim(), depts: DEPTS.filter(function (d) { return tr.querySelector('[data-dept="' + d + '"]').checked; }), role: g('role').value, active: g('active').checked };
       if (email === st.user.email && (rec.role !== 'admin' || !rec.active)) return UI.toast('自分自身の管理者権限・有効状態は変更できません');
       try { await Store.saveStaff(rec); st.staffList = await Store.listStaff(); UI.toast(isNew ? '追加しました' : '保存しました'); renderStaff(); }
       catch (er) { UI.toast('保存できませんでした：' + window.AuthUI.errText(er)); }
@@ -391,11 +394,14 @@
 
   /* ---------------- 評価期間（半年） ---------------- */
   function renderPeriods() {
-    var v = document.getElementById('view'), y = new Date(S.nowMs() + 9 * 3600e3).getUTCFullYear();
+    var jn = new Date(S.nowMs() + 9 * 3600e3), y = jn.getUTCFullYear(), mo = jn.getUTCMonth() + 1;
+    // 入力欄の初期値は「今日をふくむ半年」（4〜9月＝上期、10〜3月＝下期。1〜3月は前年の下期）
+    var dHalf = (mo >= 4 && mo <= 9) ? 1 : 2, dYear = mo <= 3 ? y - 1 : y, dMonth = dHalf === 1 ? 4 : 10;
+    var v = document.getElementById('view');
     v.innerHTML = '<div class="card"><h2>🗓 評価期間（半年に1回）</h2><p class="muted small">1期間は6か月です。期間が「受付中」のあいだ、社員は<b>毎月1回の自己評価</b>と<b>半年の目標</b>を入力できます（月の自己評価は、その月のうちだけ）。管理者評価は期間の終わりに行います。期間が重ならないように作ってください。</p>' +
-      '<div class="row"><select id="py" style="width:auto">' + [y - 1, y, y + 1].map(function (n) { return '<option' + (n === y ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>年' +
-      '<select id="ph" style="width:auto"><option value="1">上期</option><option value="2">下期</option></select>' +
-      '<label class="small" for="pm">開始月</label><select id="pm" style="width:auto">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (n) { return '<option value="' + n + '"' + (n === 4 ? ' selected' : '') + '>' + n + '月</option>'; }).join('') + '</select>から6か月' +
+      '<div class="row"><select id="py" style="width:auto">' + [y - 1, y, y + 1].map(function (n) { return '<option' + (n === dYear ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select>年' +
+      '<select id="ph" style="width:auto"><option value="1"' + (dHalf === 1 ? ' selected' : '') + '>上期</option><option value="2"' + (dHalf === 2 ? ' selected' : '') + '>下期</option></select>' +
+      '<label class="small" for="pm">開始月</label><select id="pm" style="width:auto">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (n) { return '<option value="' + n + '"' + (n === dMonth ? ' selected' : '') + '>' + n + '月</option>'; }).join('') + '</select>から6か月' +
       '<button class="btn small" id="padd">期間を作る（受付中で開始）</button></div></div>' +
       '<div class="card tbl-wrap"><table><thead><tr><th>期間</th><th>月</th><th>状態</th><th></th></tr></thead><tbody>' + st.periods.map(function (p) {
         return '<tr><td><b>' + esc(p.label) + '</b><div class="muted small">' + esc(p.id) + '</div></td><td>' + S.monthLabel(p.startYm, true) + ' 〜 ' + S.monthLabel(p.endYm, true) + '</td><td>' + (p.status === 'open' ? '<span class="chip ok">受付中</span>' : '<span class="chip gray">受付終了</span>') + '</td><td><button class="btn sub small" data-tog="' + esc(p.id) + '">' + (p.status === 'open' ? '受付を終了する' : '受付を再開する') + '</button></td></tr>';
