@@ -72,24 +72,35 @@
   /** レーダーチャート。series: [{label,color,values:[avg|null...]}] */
   UI.radar = function (cats, series) {
     var n = cats.length; if (n < 3) return '';
-    var W = 480, H = 320, cx = W / 2, cy = H / 2 + 6, R = 100;
+    // ラベルが切れたり重なったりしないよう、横に余白を広げ、長い名前は2行に折り返す
+    var W = 640, H = n > 9 ? 480 : 420, cx = W / 2, cy = H / 2, R = n > 9 ? 150 : 125;
+    var fs = n > 9 ? 13 : 14, per = n > 9 ? 8 : 9;
     function pt(i, v) { var a = -Math.PI / 2 + 2 * Math.PI * i / n, r = R * (v / 4); return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+    function wrap(t) {
+      var lines = [], rest = String(t).replace('／', '／\n').split('\n');
+      rest.forEach(function (seg) { while (seg.length > per) { lines.push(seg.slice(0, per)); seg = seg.slice(per); } if (seg) lines.push(seg); });
+      if (lines.length > 3) { lines = lines.slice(0, 3); lines[2] = lines[2].slice(0, per - 1) + '…'; }
+      return lines;
+    }
     var g = '';
     [1, 2, 3, 4].forEach(function (lv) {
       g += '<polygon points="' + cats.map(function (_, i) { return pt(i, lv).join(','); }).join(' ') + '" fill="none" stroke="#eadfdc" stroke-width="1"/>';
     });
     cats.forEach(function (c, i) {
-      var p = pt(i, 4), lp = pt(i, 4.75), anchor = lp[0] < cx - 8 ? 'end' : (lp[0] > cx + 8 ? 'start' : 'middle');
-      var short = c.length > 14 ? c.slice(0, 13) + '…' : c;
+      var p = pt(i, 4), lp = pt(i, 4.5), anchor = lp[0] < cx - 8 ? 'end' : (lp[0] > cx + 8 ? 'start' : 'middle');
+      var lines = wrap(c), lh = fs + 2, y0 = lp[1] + 4 - (lp[1] < cy - 8 ? (lines.length - 1) * lh : (Math.abs(lp[1] - cy) <= 8 ? (lines.length - 1) * lh / 2 : 0));
       g += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="#eadfdc"/>' +
-        '<text x="' + lp[0] + '" y="' + (lp[1] + 4) + '" font-size="13" text-anchor="' + anchor + '" fill="#6b5d5d">' + esc(short) + '</text>';
+        '<text x="' + lp[0] + '" y="' + y0 + '" font-size="' + fs + '" text-anchor="' + anchor + '" fill="#6b5d5d">' +
+        lines.map(function (ln, k) { return '<tspan x="' + lp[0] + '" dy="' + (k ? lh : 0) + '">' + esc(ln) + '</tspan>'; }).join('') + '</text>';
     });
     series.forEach(function (s) {
       var pts = s.values.map(function (v, i) { return pt(i, v == null ? 0 : v).join(','); }).join(' ');
       g += '<polygon points="' + pts + '" fill="' + s.color + '" fill-opacity=".18" stroke="' + s.color + '" stroke-width="2.5"' + (s.dash ? ' stroke-dasharray="5 4"' : '') + '/>';
     });
     var legend = '<div class="legend">' + series.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + esc(s.label) + '</span>'; }).join('') + '</div>';
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:520px;display:block;margin:0 auto" role="img" aria-label="区分別のバランス">' + g + '</svg>' + legend;
+    // 区分が多い（兼務）ときは、スマホでも文字が読めるよう最小幅を確保して横にスクロールできるようにする
+    var minw = n > 9 ? 'min-width:500px;' : '';
+    return '<div style="overflow-x:auto"><svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;' + minw + 'max-width:640px;display:block;margin:0 auto" role="img" aria-label="区分別のバランス">' + g + '</svg></div>' + legend;
   };
 
   /** 折れ線（半年ごとの歩み）。points: [{label, v}] */
