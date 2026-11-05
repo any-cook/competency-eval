@@ -399,14 +399,14 @@
   function renderGoals() {
     var view = document.getElementById('view'), period = periodObj(st.period), g = st.gdoc, ed = goalsEditable();
     var html = '<div class="card"><h2>🎯 ' + esc(period.label) + ' の目標</h2>' +
-      '<p class="muted" style="margin:0">半年に1度、自分の目標を決めます（' + S.MAX_GOALS + 'つまで）。毎月の自己評価のときに、進み具合を記録できます。</p>' +
+      '<p class="muted" style="margin:0">目標は、ひとつずつ立てます。まず、いま一番がんばりたい目標をひとつ決めましょう。達成できたら、次の目標を立てられます。毎月の自己評価のときに、進み具合を記録できます。</p>' +
       '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--pri-d);font-weight:700">目標の立て方のヒント</summary><ul class="small muted" style="margin:6px 0"><li>「いつまでに・何が・どうなっている」かが分かる形にすると、進み具合を測りやすくなります。</li><li>評価表の項目（力量）から「◯◯を△から〇にする」と選ぶのもおすすめです。</li><li>「やること」には、毎月続けられる小さな行動を書きましょう。</li></ul></details></div>';
 
     if (g.status === 'fixed') {
       var mgr = byPeriod(st.mgrList, st.period);
       var canAct = period.status === 'open', activeN = g.goals.filter(function (x) { return !S.goalState(x, docsIn(period)).cleared; }).length;
-      html += '<div class="card"><div class="row"><span class="chip ok">確定ずみ</span><span class="muted small">立てた目標の内容は変えられません。早く達成できたら「達成した！」を押して、次の目標に進めます。</span></div>' + goalSummary(period, g.goals, mgr, canAct) + '</div>' +
-        (canAct ? '<div class="card"><div class="row"><button class="btn" id="gnext"' + (activeN >= S.MAX_GOALS ? ' disabled' : '') + '>🌱 次の目標を立てる</button><span class="muted small">' + (activeN >= S.MAX_GOALS ? '取り組み中の目標が' + S.MAX_GOALS + 'つあります。どれかを達成してから追加できます' : '取り組み中 ' + activeN + ' / ' + S.MAX_GOALS) + '</span></div></div>' : '') + goalReviewCard();
+      html += '<div class="card"><div class="row"><span class="chip ok">確定ずみ</span><span class="muted small">立てた目標の内容は変えられません。達成できたら「達成した！」を押して、次の目標に進めます。</span></div>' + goalSummary(period, g.goals, mgr, canAct) + '</div>' +
+        (canAct ? '<div class="card"><div class="row"><button class="btn" id="gnext"' + (activeN >= S.MAX_GOALS ? ' disabled' : '') + '>🌱 次の目標を立てる</button><span class="muted small">' + (activeN >= S.MAX_GOALS ? 'いまの目標を達成すると、次の目標を立てられます' : '目標を達成しました。次の目標を立てましょう') + '</span></div></div>' : '') + goalReviewCard();
       view.innerHTML = html;
       view.onclick = function (e) {
         var d = e.target.closest('[data-gdone]'); if (d) return markDone(d.dataset.gdone);
@@ -417,7 +417,7 @@
     if (!ed) { html += '<div class="card">この期間は受付が終了しています。' + (g.goals.length ? '' : '目標は設定されませんでした。') + '</div>' + (g.goals.length ? '<div class="card">' + goalSummary(period, g.goals, byPeriod(st.mgrList, st.period)) + '</div>' : '') + goalReviewCard(); view.innerHTML = html; return; }
 
     html += '<div id="glist">' + g.goals.map(goalRow).join('') + '</div>' +
-      '<div class="card"><div class="row"><button class="btn sub small" id="gadd"' + (g.goals.length >= S.MAX_GOALS ? ' disabled' : '') + '>＋ 目標を追加</button><span class="spacer"></span><span class="save-st" id="gsave"></span><button class="btn" id="gfix">この目標で確定する</button></div></div>';
+      '<div class="card"><div class="row"><span class="spacer"></span><span class="save-st" id="gsave"></span><button class="btn" id="gfix">この目標で確定する</button></div></div>';
     view.innerHTML = html + goalReviewCard();
     if (!g.goals.length) addGoalRow();
     var vw = document.getElementById('view');
@@ -447,6 +447,7 @@
   /** 次の目標を追加（確定後でもOK） */
   function nextGoal() {
     var g = st.gdoc;
+    if (g.goals.filter(function (x) { return !S.goalState(x, docsIn(periodObj(st.period))).cleared; }).length >= S.MAX_GOALS) return UI.toast('いまの目標を達成してから、次の目標を立てられます');
     var m = UI.modal('<h2>🌱 次の目標を立てる</h2><label class="f">目標（何を、どうしたい？）</label><input type="text" id="ng-t" maxlength="80" placeholder="例）充填機の段取りを一人でできるようになる"><label class="f">そのために毎月やること</label><input type="text" id="ng-a" maxlength="120" placeholder="例）週1回、手順書を見ながら一人で段取りする"><div class="row" style="justify-content:center;margin-top:12px"><button class="btn gray" data-close>やめる</button><button class="btn" id="ok">この目標を追加</button></div>');
     m.el.querySelector('#ok').onclick = async function () {
       var t = m.el.querySelector('#ng-t').value.trim(), a = m.el.querySelector('#ng-a').value.trim();
