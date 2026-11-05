@@ -73,10 +73,14 @@
   }
 
   /** やさしいあいさつのカード（時間帯・季節・その日のひとこと） */
+  function certChip() {
+    var c = S.certifiedOf(st.staff), t = S.certTitle(c.length, Object.keys(window.COMPETENCY_ITEMS).length);
+    return t ? '<div class="cert-chip" title="' + esc(c.join('・')) + '">' + t.emoji + ' ' + esc(t.name) + '<span>' + esc(c.join('・')) + '</span></div>' : '';
+  }
   function greetCard() {
     var g = S.greeting(), nm = S.givenName(st.staff.name) || st.staff.name;
     return '<div class="greet"><div class="gr-l"><div class="gr-hi">' + esc(g.text) + ' ' + g.icon + '</div><div class="gr-name">' + esc(nm) + ' さん</div>' +
-      '<div class="gr-msg">' + esc(S.dailyMessage()) + '</div></div><div class="gr-art" aria-hidden="true">' + S.seasonEmoji() + '</div></div>';
+      certChip() + '<div class="gr-msg">' + esc(S.dailyMessage()) + '</div></div><div class="gr-art" aria-hidden="true">' + S.seasonEmoji() + '</div></div>';
   }
   function repliesSorted() { return st.replies.slice().sort(function (a, b) { return a.ym < b.ym ? 1 : -1; }); }
   /** 管理者からのひとこと。未読があれば全部、なければ最新の1通 */

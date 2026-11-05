@@ -279,6 +279,19 @@
     if (!a.length && staff && staff.dept) a = [staff.dept];
     return a;
   }
+  /** 管理者が「できる」と認定した部署（名簿の certified）。担当部署のうち認定済みのものだけ数える */
+  function certifiedOf(staff) {
+    var a = staff && Array.isArray(staff.certified) ? staff.certified.filter(Boolean) : [];
+    return a.filter(function (d, i) { return a.indexOf(d) === i; });
+  }
+  /** できる部署の数に応じた称号（レベルの上限は変えず、称号だけ増える）。total=会社の部署数 */
+  function certTitle(n, total) {
+    if (!n) return null;
+    if (total >= 2 && n >= total) return { emoji: '🌈', name: 'オールラウンダー', note: '全部の部署をこなせます（' + n + '部署）' };
+    if (n >= 3) return { emoji: '🌈', name: 'オールラウンダー', note: n + '部署をこなせます' };
+    if (n === 2) return { emoji: '🎪', name: '二刀流', note: '2つの部署をこなせます' };
+    return { emoji: '🎯', name: '部署マスター', note: '1つの部署をこなせます' };
+  }
   function deptLabel(staff) { return deptsOf(staff).join('・'); }
   /** 部署の評価項目をまとめる。項目番号は部署ごとに100ずつずらして重ならないようにする（製造0・営業100・経理200）。表示用の番号は dispNo */
   function itemsForDepts(all, depts) {
@@ -312,7 +325,7 @@
     nowMs: nowMs, ymOf: ymOf, nowYm: nowYm, ymStartMs: ymStartMs, addMonths: addMonths, monthRange: monthRange,
     monthLabel: monthLabel, lastDay: lastDay, daysLeftInMonth: daysLeftInMonth, periodForYm: periodForYm,
     greeting: greeting, seasonEmoji: seasonEmoji, dailyMessage: dailyMessage, givenName: givenName, cleanReviewer: cleanReviewer,
-    hasWriting: hasWriting, REPLY_MAX: REPLY_MAX, DAILY: DAILY, deptsOf: deptsOf, deptLabel: deptLabel, itemsForDepts: itemsForDepts,
+    hasWriting: hasWriting, REPLY_MAX: REPLY_MAX, DAILY: DAILY, deptsOf: deptsOf, certifiedOf: certifiedOf, certTitle: certTitle, deptLabel: deptLabel, itemsForDepts: itemsForDepts,
     SUG_CATS: SUG_CATS, SUG_STATUS: SUG_STATUS, SUG_TITLE_MAX: SUG_TITLE_MAX, SUG_BODY_MAX: SUG_BODY_MAX, sugStatus: sugStatus,
     monthStatus: monthStatus, streak: streak, goalAchievement: goalAchievement, latestGoalProgress: latestGoalProgress
   };

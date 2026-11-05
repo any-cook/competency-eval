@@ -89,7 +89,7 @@
     saveStaff: function (st) {
       var email = lower(st.email);
       var depts = S.deptsOf(st);
-      return db.collection('staff').doc(email).set({ email: email, name: st.name || '', dept: depts[0] || '', depts: depts, role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
+      return db.collection('staff').doc(email).set({ email: email, name: st.name || '', dept: depts[0] || '', depts: depts, certified: S.certifiedOf(st), role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
     },
 
     listPeriods: async function () {
@@ -150,7 +150,7 @@
     }
     var cur = mkPeriod(curStart, 'open'), prev = mkPeriod(prevStart, 'closed');
     var staff = [
-      { email: 'seizo@demo.local', name: '製造 花子', dept: '製造部', role: 'employee', active: true },
+      { email: 'seizo@demo.local', name: '製造 花子', dept: '製造部', depts: ['製造部', '営業部'], certified: ['製造部', '営業部'], role: 'employee', active: true },
       { email: 'seizo2@demo.local', name: '製造 太郎', dept: '製造部', role: 'employee', active: true },
       { email: 'eigyo@demo.local', name: '営業 桜', dept: '営業部', role: 'employee', active: true },
       { email: 'keiri@demo.local', name: '経理 葵', dept: '経理部', role: 'employee', active: true },
@@ -246,7 +246,7 @@
       var d = dload(), email = lower(st.email);
       d.staff = d.staff.filter(function (s) { return s.email !== email; });
       var depts = S.deptsOf(st);
-      d.staff.push({ email: email, name: st.name || '', dept: depts[0] || '', depts: depts, role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
+      d.staff.push({ email: email, name: st.name || '', dept: depts[0] || '', depts: depts, certified: S.certifiedOf(st), role: st.role === 'admin' ? 'admin' : 'employee', active: st.active !== false });
       dsave(d);
     },
     listPeriods: async function () { return clone(dload().periods).sort(function (a, b) { return a.id < b.id ? 1 : -1; }); },

@@ -279,3 +279,5 @@ body.me .dock { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 20px rgba(238, 
 
 .brand .logo { width: 32px; height: 32px; border-radius: 9px; vertical-align: middle; margin: -4px 4px 0 0; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .login-logo { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+.cert-chip { display:inline-block; margin:6px 0 2px; padding:4px 12px; border-radius:999px; background:rgba(255,255,255,.75); font-weight:700; font-size:.9rem; color:#a8486a; }
+.cert-chip span { font-weight:400; font-size:.75rem; margin-left:6px; color:#7a5a63; }

@@ -364,6 +364,7 @@
   }
 
   /* ---------------- 社員名簿 ---------------- */
+  function certNote(s) { var t = S.certTitle(S.certifiedOf(s).length, DEPTS.length); return t ? '<div class="small" style="margin-top:4px">' + t.emoji + ' ' + esc(t.name) + '</div>' : ''; }
   function renderStaff() {
     var v = document.getElementById('view');
     function row(s, isNew) {
@@ -371,11 +372,12 @@
         '<td><input type="text" data-f="name" value="' + esc(s.name || '') + '" placeholder="氏名"></td>' +
         '<td><div class="deptchecks" data-f="depts">' + DEPTS.map(function (d) { return '<label class="dchk"><input type="checkbox" data-dept="' + esc(d) + '"' + (S.deptsOf(s).indexOf(d) >= 0 ? ' checked' : '') + '> ' + esc(d) + '</label>'; }).join('') +
         '<button type="button" class="stamp" data-alld>全部署</button><button type="button" class="stamp" data-nod>なし</button></div></td>' +
+        '<td><div class="deptchecks" data-f="cert">' + DEPTS.map(function (d) { return '<label class="dchk"><input type="checkbox" data-cert="' + esc(d) + '"' + (S.certifiedOf(s).indexOf(d) >= 0 ? ' checked' : '') + '> ' + esc(d) + '</label>'; }).join('') + certNote(s) + '</div></td>' +
         '<td><select data-f="role"><option value="employee"' + (s.role !== 'admin' ? ' selected' : '') + '>一般</option><option value="admin"' + (s.role === 'admin' ? ' selected' : '') + '>管理者</option></select></td>' +
         '<td style="text-align:center"><input type="checkbox" data-f="active"' + (s.active !== false ? ' checked' : '') + '></td><td><button class="btn small" data-save>' + (isNew ? '追加' : '保存') + '</button></td></tr>';
     }
-    v.innerHTML = '<div class="card"><h2>👥 社員名簿</h2><p class="muted small">ここに登録したメールアドレスで本人がログインすると、<b>部署の評価表</b>が自動で出ます。兼務の人は、部署を<b>複数</b>チェックしてください（評価表が1つにまとまって出ます）。「全部署」ボタンで、すべての部署をまとめて選べます。メールアドレスは本人がログインに使うものと同じにしてください。<br>退職・休職などは「有効」のチェックを外すと、ログインできなくなります（評価データは残ります）。</p>' +
-      '<div class="tbl-wrap"><table><thead><tr><th>メールアドレス</th><th>氏名</th><th>部署（兼務は複数）</th><th>権限</th><th>有効</th><th></th></tr></thead><tbody>' +
+    v.innerHTML = '<div class="card"><h2>👥 社員名簿</h2><p class="muted small">ここに登録したメールアドレスで本人がログインすると、<b>部署の評価表</b>が自動で出ます。兼務の人は、部署を<b>複数</b>チェックしてください（評価表が1つにまとまって出ます）。<b>「できる部署（認定）」</b>は、その部署の仕事を一人でこなせると判断した部署にチェックします。認定した数に応じて、本人のマイページに称号が付きます（1部署＝🎯部署マスター／2部署＝🎪二刀流／全部署＝🌈オールラウンダー）。レベルは10段階のままです。「全部署」ボタンで、すべての部署をまとめて選べます。メールアドレスは本人がログインに使うものと同じにしてください。<br>退職・休職などは「有効」のチェックを外すと、ログインできなくなります（評価データは残ります）。</p>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>メールアドレス</th><th>氏名</th><th>部署（兼務は複数）</th><th>できる部署（認定）</th><th>権限</th><th>有効</th><th></th></tr></thead><tbody>' +
       row({ role: 'employee' }, true) + st.staffList.sort(function (a, b) { return a.email < b.email ? -1 : 1; }).map(function (s) { return row(s, false); }).join('') + '</tbody></table></div></div>';
     v.onclick = async function (e) {
       var all = e.target.closest('[data-alld]'), none = e.target.closest('[data-nod]');
@@ -385,7 +387,7 @@
       var isNew = tr.dataset.new === '1', email = String(isNew ? g('email').value : g('email').textContent).trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return UI.toast('メールアドレスを正しく入力してください');
       if (!g('name').value.trim()) return UI.toast('氏名を入力してください');
-      var rec = { email: email, name: g('name').value.trim(), depts: DEPTS.filter(function (d) { return tr.querySelector('[data-dept="' + d + '"]').checked; }), role: g('role').value, active: g('active').checked };
+      var rec = { email: email, name: g('name').value.trim(), depts: DEPTS.filter(function (d) { return tr.querySelector('[data-dept="' + d + '"]').checked; }), certified: DEPTS.filter(function (d) { return tr.querySelector('[data-cert="' + d + '"]').checked; }), role: g('role').value, active: g('active').checked };
       if (email === st.user.email && (rec.role !== 'admin' || !rec.active)) return UI.toast('自分自身の管理者権限・有効状態は変更できません');
       try { await Store.saveStaff(rec); st.staffList = await Store.listStaff(); UI.toast(isNew ? '追加しました' : '保存しました'); renderStaff(); }
       catch (er) { UI.toast('保存できませんでした：' + window.AuthUI.errText(er)); }

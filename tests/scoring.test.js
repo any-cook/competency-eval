@@ -200,3 +200,13 @@ test('10段階の「レベル」：見習いから、エニクックになくて
   assert.ok(Math.abs(n.remaining - 0.2) < 1e-9);
   S.useSet('sodachi');
 });
+
+test('できる部署の認定と称号', () => {
+  assert.deepStrictEqual(S.certifiedOf({ certified: ['製造部', '製造部', ''] }), ['製造部']);
+  assert.deepStrictEqual(S.certifiedOf({}), []);
+  assert.strictEqual(S.certTitle(0, 3), null);
+  assert.strictEqual(S.certTitle(1, 3).name, '部署マスター');
+  assert.strictEqual(S.certTitle(2, 3).name, '二刀流');
+  assert.strictEqual(S.certTitle(3, 3).name, 'オールラウンダー');
+  assert.strictEqual(S.certTitle(2, 2).name, 'オールラウンダー');
+});
