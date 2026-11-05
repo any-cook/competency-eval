@@ -212,17 +212,19 @@
   }
 
   /** 目標ごとの月別の進み具合 + 上司の達成度 */
-  function goalSummary(period, goals, mgr) {
+  function goalSummary(period, goals, mgr, act) {
     var months = S.monthRange(period.startYm, period.endYm);
     return goals.map(function (g) {
-      var lp = S.latestGoalProgress(g.id, docsIn(period)), v = lp ? lp.v : 0;
+      var gs = S.goalState(g, docsIn(period)), v = gs.v;
       var dots = months.map(function (ym) {
         var d = st.monthly.filter(function (x) { return x.ym === ym; })[0], pv = d && d.goalProgress ? d.goalProgress[g.id] : undefined;
         return '<span class="gdot" title="' + S.monthLabel(ym) + '">' + S.monthLabel(ym) + '<b>' + (typeof pv === 'number' ? pv + '%' : '–') + '</b></span>';
       }).join('');
       var res = mgr && mgr.goalScores && mgr.goalScores[g.id] ? '<div class="msg info small" style="margin:8px 0 0">👤 上司の評価：<b>' + esc(S.GOAL_LEVELS[mgr.goalScores[g.id] - 1].name) + '</b>' + (mgr.goalComments && mgr.goalComments[g.id] ? '　「' + esc(mgr.goalComments[g.id]) + '」' : '') + '</div>' : '';
-      return '<div class="goal"><div class="row"><b style="flex:1">' + esc(g.title) + '</b><span class="chip">' + v + '%</span></div>' +
-        (g.action ? '<div class="small muted">やること：' + esc(g.action) + '</div>' : '') + '<div class="bar" style="margin:6px 0"><i style="width:' + v + '%"></i></div><div class="gdots">' + dots + '</div>' + res + '</div>';
+      var done = gs.cleared ? '<span class="chip ok">🎉 達成' + (gs.ym ? '（' + S.monthLabel(gs.ym) + '）' : '') + '</span>' : '<span class="chip">' + v + '%</span>';
+      var btn = act && !gs.cleared ? '<div style="margin-top:8px"><button class="btn sub small" data-gdone="' + g.id + '">✅ この目標を達成した！</button></div>' : '';
+      return '<div class="goal' + (gs.cleared ? ' cleared' : '') + '"><div class="row"><b style="flex:1">' + esc(g.title) + '</b>' + done + '</div>' +
+        (g.action ? '<div class="small muted">やること：' + esc(g.action) + '</div>' : '') + '<div class="bar" style="margin:6px 0"><i style="width:' + v + '%"></i></div><div class="gdots">' + dots + '</div>' + res + btn + '</div>';
     }).join('');
   }
 
@@ -250,7 +252,8 @@
 
     // 目標の進み具合
     if (goals.length) {
-      html += '<div class="card"><h2>🎯 半年の目標の進み具合</h2><p class="muted small" style="margin-top:0">今月は、どこまで進みましたか？</p>' + goals.map(function (g) {
+      var activeGoals = askGoals(cp), clearedGoals = goals.filter(function (g) { return activeGoals.indexOf(g) < 0; });
+      html += '<div class="card"><h2>🎯 半年の目標の進み具合</h2><p class="muted small" style="margin-top:0">今月は、どこまで進みましたか？（達成した目標は「🎯 半年の目標」で次の目標を立てられます）</p>' + (clearedGoals.length ? '<p class="small" style="margin:0 0 8px">🎉 達成ずみ：' + clearedGoals.map(function (g) { return esc(g.title); }).join('、') + '</p>' : '') + activeGoals.map(function (g) {
         var v = doc.goalProgress[g.id], note = doc.goalNotes[g.id] || '';
         return '<div class="goal" data-gid="' + g.id + '"><b>' + esc(g.title) + '</b>' + (g.action ? '<div class="small muted">やること：' + esc(g.action) + '</div>' : '') +
           '<div class="gp">' + S.GOAL_PROGRESS.map(function (o) {
@@ -323,8 +326,13 @@
     updateProgress();
   }
 
+  /** 今月の進み具合を聞く目標（先月までに達成ずみの目標は聞かない） */
+  function askGoals(cp) {
+    var prevDocs = docsIn(cp).filter(function (d) { return d.ym !== st.nowYm; });
+    return goalsFor(cp.id).filter(function (g) { return !S.goalState(g, prevDocs).cleared; });
+  }
   function goalsAnswered() {
-    var cp = curPeriod(), goals = cp ? goalsFor(cp.id) : [];
+    var cp = curPeriod(), goals = cp ? askGoals(cp) : [];
     return { total: goals.length, answered: goals.filter(function (g) { return typeof st.doc.goalProgress[g.id] === 'number'; }).length };
   }
   function updateProgress() {
@@ -371,7 +379,7 @@
     if (p.answered < p.total || gp.answered < gp.total) {
       UI.toast('あと ' + (p.total - p.answered + gp.total - gp.answered) + '項目 未入力です');
       var el = null;
-      if (gp.answered < gp.total) el = document.querySelector('.goal[data-gid="' + goalsFor(curPeriod().id).filter(function (g) { return typeof st.doc.goalProgress[g.id] !== 'number'; })[0].id + '"]');
+      if (gp.answered < gp.total) el = document.querySelector('.goal[data-gid="' + askGoals(curPeriod()).filter(function (g) { return typeof st.doc.goalProgress[g.id] !== 'number'; })[0].id + '"]');
       else { var first = st.items.filter(function (i) { return st.doc.scores[i.no] == null; })[0]; el = document.querySelector('.item[data-no="' + first.no + '"]'); if (el) el.closest('details').open = true; }
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
@@ -396,14 +404,21 @@
 
     if (g.status === 'fixed') {
       var mgr = byPeriod(st.mgrList, st.period);
-      html += '<div class="card"><div class="row"><span class="chip ok">確定ずみ</span><span class="muted small">確定した目標は、本人は変更できません（変更したいときは管理者に相談）。</span></div>' + goalSummary(period, g.goals, mgr) + '</div>';
-      view.innerHTML = html; return;
+      var canAct = period.status === 'open', activeN = g.goals.filter(function (x) { return !S.goalState(x, docsIn(period)).cleared; }).length;
+      html += '<div class="card"><div class="row"><span class="chip ok">確定ずみ</span><span class="muted small">立てた目標の内容は変えられません。早く達成できたら「達成した！」を押して、次の目標に進めます。</span></div>' + goalSummary(period, g.goals, mgr, canAct) + '</div>' +
+        (canAct ? '<div class="card"><div class="row"><button class="btn" id="gnext"' + (activeN >= S.MAX_GOALS ? ' disabled' : '') + '>🌱 次の目標を立てる</button><span class="muted small">' + (activeN >= S.MAX_GOALS ? '取り組み中の目標が' + S.MAX_GOALS + 'つあります。どれかを達成してから追加できます' : '取り組み中 ' + activeN + ' / ' + S.MAX_GOALS) + '</span></div></div>' : '') + goalReviewCard();
+      view.innerHTML = html;
+      view.onclick = function (e) {
+        var d = e.target.closest('[data-gdone]'); if (d) return markDone(d.dataset.gdone);
+        if (e.target.closest('#gnext')) nextGoal();
+      };
+      return;
     }
-    if (!ed) { html += '<div class="card">この期間は受付が終了しています。' + (g.goals.length ? '' : '目標は設定されませんでした。') + '</div>' + (g.goals.length ? '<div class="card">' + goalSummary(period, g.goals, byPeriod(st.mgrList, st.period)) + '</div>' : ''); view.innerHTML = html; return; }
+    if (!ed) { html += '<div class="card">この期間は受付が終了しています。' + (g.goals.length ? '' : '目標は設定されませんでした。') + '</div>' + (g.goals.length ? '<div class="card">' + goalSummary(period, g.goals, byPeriod(st.mgrList, st.period)) + '</div>' : '') + goalReviewCard(); view.innerHTML = html; return; }
 
     html += '<div id="glist">' + g.goals.map(goalRow).join('') + '</div>' +
       '<div class="card"><div class="row"><button class="btn sub small" id="gadd"' + (g.goals.length >= S.MAX_GOALS ? ' disabled' : '') + '>＋ 目標を追加</button><span class="spacer"></span><span class="save-st" id="gsave"></span><button class="btn" id="gfix">この目標で確定する</button></div></div>';
-    view.innerHTML = html;
+    view.innerHTML = html + goalReviewCard();
     if (!g.goals.length) addGoalRow();
     var vw = document.getElementById('view');
     vw.oninput = function (e) {
@@ -418,6 +433,46 @@
       if (rm) { g.goals = g.goals.filter(function (x) { return String(x.id) !== rm.dataset.grm; }); queueGoals(); renderGoals(); return; }
       if (e.target.closest('#gfix')) fixGoals();
     };
+  }
+  /** 目標を達成にして、お祝いする */
+  function markDone(id) {
+    var g = st.gdoc, goal = g.goals.filter(function (x) { return String(x.id) === String(id); })[0]; if (!goal) return;
+    var m = UI.modal('<div class="big">🎉</div><h2>この目標を達成にしますか？</h2><p><b>' + esc(goal.title) + '</b></p><p class="muted small">達成にすると、毎月の進み具合は聞かれなくなり、次の目標を立てられます。</p><div class="row" style="justify-content:center"><button class="btn gray" data-close>まだ途中</button><button class="btn" id="ok">達成した！</button></div>');
+    m.el.querySelector('#ok').onclick = async function () {
+      this.disabled = true; goal.doneYm = st.nowYm;
+      if (await saveGoals('fixed')) { m.close(); UI.confetti(); UI.toast('達成おめでとうございます！次の目標も立てられます'); renderGoals(); }
+      else { delete goal.doneYm; this.disabled = false; }
+    };
+  }
+  /** 次の目標を追加（確定後でもOK） */
+  function nextGoal() {
+    var g = st.gdoc;
+    var m = UI.modal('<h2>🌱 次の目標を立てる</h2><label class="f">目標（何を、どうしたい？）</label><input type="text" id="ng-t" maxlength="80" placeholder="例）充填機の段取りを一人でできるようになる"><label class="f">そのために毎月やること</label><input type="text" id="ng-a" maxlength="120" placeholder="例）週1回、手順書を見ながら一人で段取りする"><div class="row" style="justify-content:center;margin-top:12px"><button class="btn gray" data-close>やめる</button><button class="btn" id="ok">この目標を追加</button></div>');
+    m.el.querySelector('#ok').onclick = async function () {
+      var t = m.el.querySelector('#ng-t').value.trim(), a = m.el.querySelector('#ng-a').value.trim();
+      if (!t) return UI.toast('目標を入力してください');
+      this.disabled = true;
+      var id = g.goals.reduce(function (mx, x) { return Math.max(mx, x.id); }, 0) + 1;
+      g.goals.push({ id: id, title: t, action: a, addedYm: st.nowYm });
+      if (await saveGoals('fixed')) { m.close(); UI.toast('次の目標を追加しました。毎月の進み具合を記録していきましょう'); renderGoals(); }
+      else { g.goals.pop(); this.disabled = false; }
+    };
+  }
+  /** 半年ごとに「立てた目標・達成した目標」をふりかえる */
+  function goalReviewCard() {
+    var rows = [], T = 0, C = 0;
+    st.periods.slice().sort(function (a, b) { return a.startYm < b.startYm ? 1 : -1; }).forEach(function (p) {
+      var goals = goalsFor(p.id); if (!goals.length) return;
+      var r = S.goalReview(goals, docsIn(p)), mg = byPeriod(st.mgrList, p.id); T += r.total; C += r.cleared;
+      rows.push('<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row"><b>' + esc(p.label) + '</b><span class="spacer"></span><span class="chip ' + (r.cleared ? 'ok' : '') + '">' + r.total + '個立てて、' + r.cleared + '個達成</span></div>' +
+        '<div class="bar" style="margin:6px 0"><i style="width:' + Math.round(r.cleared / r.total * 100) + '%"></i></div>' +
+        r.list.map(function (x) {
+          var g = x.goal, res = mg && mg.goalScores && mg.goalScores[g.id] ? '　<span class="muted">上司：' + esc(S.GOAL_LEVELS[mg.goalScores[g.id] - 1].name) + '</span>' : '';
+          return '<div class="small" style="margin:4px 0">' + (x.cleared ? '🎉' : '🌱') + ' ' + esc(g.title) + '　<span class="muted">' + (x.cleared ? (x.ym ? S.monthLabel(x.ym) + 'に達成' : '達成') : '進み具合 ' + x.v + '%') + (g.addedYm ? '・' + S.monthLabel(g.addedYm) + 'に追加' : '') + '</span>' + res + '</div>';
+        }).join('') + '</div>');
+    });
+    if (!rows.length) return '';
+    return '<div class="card"><h2>🔍 目標のふりかえり</h2><p class="muted small" style="margin-top:0">半年ごとに、どれだけ目標を立てて、いくつ達成できたかのまとめです。これまで通算で <b>' + T + '個</b>の目標を立てて、<b>' + C + '個</b>達成しています。</p>' + rows.join('') + '</div>';
   }
   function goalRow(x, i) {
     return '<div class="card goal-edit" data-gid="' + x.id + '"><div class="row"><b>目標 ' + (i + 1) + '</b><span class="spacer"></span><button class="btn gray small" data-grm="' + x.id + '">削除</button></div>' +
@@ -545,6 +600,7 @@
       var p = periodObj(m.period), a = S.average(items, m.scores), stg = S.stageFor(a), goals = goalsFor(m.period), ga = S.goalAchievement(goals, m.goalScores);
       return '<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-size:2.2rem">' + (stg ? stg.emoji : '') + '</div><div><b>' + esc(p ? p.label : m.period) + '</b> ' + (stg ? '<span class="chip">' + esc(stg.title) + '</span>' : '') + '<div class="small muted">上司の評価 平均 ' + (a != null ? a.toFixed(2) : '—') + (ga != null ? '　目標の達成度 ' + ga + '%' : '') + '</div></div></div>';
     }).join('') + '</div>';
+    html += goalReviewCard();
     view.innerHTML = html;
   }
 

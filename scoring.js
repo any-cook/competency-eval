@@ -226,6 +226,19 @@
   }
 
 
+  /** 目標のようす：本人が「達成した」を押した(doneYm)か、月の進み具合が100%なら達成ずみ */
+  function goalState(g, docs) {
+    var lp = latestGoalProgress(g.id, docs);
+    if (g.doneYm) return { cleared: true, ym: g.doneYm, v: 100 };
+    if (lp && lp.v === 100) return { cleared: true, ym: lp.ym, v: 100 };
+    return { cleared: false, ym: null, v: lp ? lp.v : 0 };
+  }
+  /** 半年ぶんの「立てた目標／達成した目標」 */
+  function goalReview(goals, docs) {
+    var list = (goals || []).map(function (g) { var s = goalState(g, docs); return { goal: g, cleared: s.cleared, ym: s.ym, v: s.v }; });
+    return { total: list.length, cleared: list.filter(function (x) { return x.cleared; }).length, list: list };
+  }
+
   /* ---------------- あいさつ・季節・返信まわり（見た目用） ---------------- */
   var DAILY = [
     '今日の自分に「おつかれさま」を言えたら、それで十分です。',
@@ -325,7 +338,7 @@
     nowMs: nowMs, ymOf: ymOf, nowYm: nowYm, ymStartMs: ymStartMs, addMonths: addMonths, monthRange: monthRange,
     monthLabel: monthLabel, lastDay: lastDay, daysLeftInMonth: daysLeftInMonth, periodForYm: periodForYm,
     greeting: greeting, seasonEmoji: seasonEmoji, dailyMessage: dailyMessage, givenName: givenName, cleanReviewer: cleanReviewer,
-    hasWriting: hasWriting, REPLY_MAX: REPLY_MAX, DAILY: DAILY, deptsOf: deptsOf, certifiedOf: certifiedOf, certTitle: certTitle, deptLabel: deptLabel, itemsForDepts: itemsForDepts,
+    hasWriting: hasWriting, REPLY_MAX: REPLY_MAX, DAILY: DAILY, goalState: goalState, goalReview: goalReview, deptsOf: deptsOf, certifiedOf: certifiedOf, certTitle: certTitle, deptLabel: deptLabel, itemsForDepts: itemsForDepts,
     SUG_CATS: SUG_CATS, SUG_STATUS: SUG_STATUS, SUG_TITLE_MAX: SUG_TITLE_MAX, SUG_BODY_MAX: SUG_BODY_MAX, sugStatus: sugStatus,
     monthStatus: monthStatus, streak: streak, goalAchievement: goalAchievement, latestGoalProgress: latestGoalProgress
   };

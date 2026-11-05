@@ -4,7 +4,7 @@ rules_version = '2';
 //  ・名簿(staff)に登録され、有効なメールだけが使える。部署・権限は名簿で決まる
 //  ・月次の自己評価(monthlyEvals)は、サーバー時刻（日本時間）が「その月」のあいだだけ入力・提出できる
 //    → 月が変わると、前の月は入力も提出もできない（さかのぼり不可）。提出後は本人は変更不可
-//  ・半年の目標(goals)は、期間が受付中のあいだだけ。「確定」後は本人は変更不可
+//  ・半年の目標(goals)は、期間が受付中のあいだだけ。「確定」後は、本人は目標を減らせない（次の目標の追加と達成の記録はできる）
 //  ・管理者評価(mgrEvals)は、管理者が「公開」するまで本人は読めない
 //  ・提案ボックス(suggestions)は、社員が新規投稿でき、管理者が状態・返事・公開を決める。公開(public)したものは全社員が読める
 //  ・ひとこと返信(replies)は、管理者だけが書ける（300字まで）。本人は自分宛てを読み、既読(readAt)だけ更新できる
@@ -54,7 +54,7 @@ service cloud.firestore {
         && d.email == myEmail()
         && d.dept == get(staffPath(myEmail())).data.dept
         && d.status in ['draft', 'fixed']
-        && d.goals is list && d.goals.size() <= 5
+        && d.goals is list && d.goals.size() <= 15
         && periodOpen(d.period);
     }
 
@@ -88,7 +88,9 @@ service cloud.firestore {
       allow get: if isAdmin() || (isStaff() && ownerOf(id));
       allow list: if isAdmin() || (isStaff() && resource.data.email == myEmail());
       allow create: if isAdmin() || (isStaff() && ownerOf(id) && validGoals(id));
-      allow update: if isAdmin() || (isStaff() && ownerOf(id) && resource.data.status != 'fixed' && validGoals(id));
+      allow update: if isAdmin() || (isStaff() && ownerOf(id) && validGoals(id)
+        && (resource.data.status != 'fixed'
+            || (request.resource.data.status == 'fixed' && request.resource.data.goals.size() >= resource.data.goals.size())));
       allow delete: if isAdmin();
     }
 

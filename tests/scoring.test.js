@@ -210,3 +210,14 @@ test('できる部署の認定と称号', () => {
   assert.strictEqual(S.certTitle(3, 3).name, 'オールラウンダー');
   assert.strictEqual(S.certTitle(2, 2).name, 'オールラウンダー');
 });
+
+test('目標の達成判定とふりかえり', () => {
+  const goals = [{ id: 1, title: 'a' }, { id: 2, title: 'b', doneYm: '2026-11' }, { id: 3, title: 'c' }];
+  const docs = [{ ym: '2026-10', goalProgress: { 1: 50, 3: 100 } }, { ym: '2026-11', goalProgress: { 1: 75 } }];
+  assert.deepStrictEqual(S.goalState(goals[0], docs), { cleared: false, ym: null, v: 75 });
+  assert.deepStrictEqual(S.goalState(goals[1], docs), { cleared: true, ym: '2026-11', v: 100 });
+  assert.strictEqual(S.goalState(goals[2], docs).cleared, true);
+  const r = S.goalReview(goals, docs);
+  assert.strictEqual(r.total, 3); assert.strictEqual(r.cleared, 2);
+  assert.deepStrictEqual(S.goalReview([], docs), { total: 0, cleared: 0, list: [] });
+});

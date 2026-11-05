@@ -183,7 +183,8 @@
           return '<span class="gdot" title="' + esc(nt || '') + '">' + S.monthLabel(ym) + '<b>' + (typeof pv === 'number' ? pv + '%' : '–') + '</b>' + (nt ? ' 💬' : '') + '</span>';
         }).join('');
         var notes = docs.filter(function (d) { return d.goalNotes && d.goalNotes[g.id]; }).map(function (d) { return '<div class="small muted">' + S.monthLabel(d.ym) + '：' + esc(d.goalNotes[g.id]) + '</div>'; }).join('');
-        return '<div class="goal" data-gid="' + g.id + '"><b>' + esc(g.title) + '</b>' + (g.action ? '<div class="small muted">やること：' + esc(g.action) + '</div>' : '') + '<div class="gdots" style="margin:6px 0">' + dots + '</div>' + notes +
+        var gst = S.goalState(g, docs), chipDone = gst.cleared ? ' <span class="chip ok">🎉 本人が達成' + (gst.ym ? '（' + S.monthLabel(gst.ym) + '）' : '') + '</span>' : '', chipAdd = g.addedYm ? ' <span class="chip">' + S.monthLabel(g.addedYm) + 'に追加</span>' : '';
+        return '<div class="goal" data-gid="' + g.id + '"><b>' + esc(g.title) + '</b>' + chipDone + chipAdd + (g.action ? '<div class="small muted">やること：' + esc(g.action) + '</div>' : '') + '<div class="gdots" style="margin:6px 0">' + dots + '</div>' + notes +
           '<div class="row" style="margin-top:8px"><b class="small">達成度</b><div class="mini-lv" data-glv>' + S.GOAL_LEVELS.map(function (l) { return '<button type="button" data-s="' + l.score + '" class="' + (m.goalScores[g.id] === l.score ? 'on' : '') + '" title="' + esc(l.short) + '" style="width:auto;padding:0 10px">' + l.name + '</button>'; }).join('') + '</div></div>' +
           '<input type="text" data-gc value="' + esc(m.goalComments[g.id] || '') + '" placeholder="目標へのコメント（任意）" style="margin-top:6px"></div>';
       }).join('') + '</div>' +

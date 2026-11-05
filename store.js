@@ -272,7 +272,8 @@
       if (!(u && isAdminEmail(d, u.email))) {
         var per = d.periods.filter(function (p) { return p.id === period; })[0];
         if (!per || per.status !== 'open') throw denied('受付中の期間ではありません');
-        if (old && old.status === 'fixed') throw denied('確定済みの目標は変更できません');
+        if (old && old.status === 'fixed' && !(data.status === 'fixed' && (data.goals || []).length >= (old.goals || []).length)) throw denied('確定済みの目標は減らせません');
+        if ((data.goals || []).length > 15) throw denied('目標が多すぎます');
       }
       d.goals[id] = clone(data); dsave(d);
     },
