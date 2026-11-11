@@ -396,7 +396,43 @@
   /* ---------------- 半年の目標 ---------------- */
   function goalsEditable() { var p = periodObj(st.period); return !!p && p.status === 'open' && st.gdoc.status !== 'fixed'; }
 
+  /** 「半年の目標」タブ：目標と進み具合／個人目標シート の切り替え */
   function renderGoals() {
+    var view = document.getElementById('view'), nav = '<div class="gnav"><button class="btn sub small' + (st.gv === 'sheet' ? '' : ' on') + '" data-gv="goals">🎯 目標と進み具合</button><button class="btn sub small' + (st.gv === 'sheet' ? ' on' : '') + '" data-gv="sheet">📝 個人目標シート</button></div>';
+    function bindNav() { view.querySelectorAll('[data-gv]').forEach(function (b) { b.onclick = function () { st.gv = b.dataset.gv; renderGoals(); window.scrollTo(0, 0); }; }); }
+    if (st.gv === 'sheet') {
+      view.onclick = null; view.oninput = null; view.onchange = null;
+      view.innerHTML = nav + '<div id="sheet-box"><div class="card muted">読み込み中…</div></div>'; bindNav();
+      renderSheet(); return;
+    }
+    renderGoalsMain(); view.insertAdjacentHTML('afterbegin', nav); bindNav();
+  }
+  /* ---------------- 個人目標シート ---------------- */
+  async function renderSheet() {
+    var period = periodObj(st.period), box = document.getElementById('sheet-box'), pid = st.period;
+    st.sheets = st.sheets || {};
+    if (!(pid in st.sheets)) { try { st.sheets[pid] = await Store.getGoalSheet(pid, st.user.email); } catch (e) { box.innerHTML = '<div class="msg err">読み込めませんでした：' + esc(window.AuthUI.errText(e)) + '</div>'; return; } }
+    if (st.period !== pid || st.gv !== 'sheet' || st.tab !== 'goals') return;
+    var months = S.monthRange(period.startYm, period.endYm), ed = period.status === 'open', saved = st.sheets[pid];
+    if (!ed) {
+      box = document.getElementById('sheet-box');
+      box.innerHTML = (saved ? '' : '<div class="card">この期間のシートは書かれていません。</div>') + (saved ? '<div class="card"><button class="btn sub small" id="gs-print">🖨 印刷する</button></div>' + GoalSheet.html(saved, months, true, st.staff.name) : '');
+      var pb = document.getElementById('gs-print'); if (pb) pb.onclick = function () { GoalSheet.print(saved, months, st.staff.name, period.label + ' 個人目標シート'); };
+      return;
+    }
+    box.innerHTML = '<div class="card"><div class="row"><span class="muted small">' + esc(period.label) + '</span><span class="spacer"></span><span class="save-st" id="gs-status"></span><button class="btn sub small" id="gs-print">🖨 印刷する</button></div></div><div id="gs-body"></div>';
+    var cur = saved;
+    GoalSheet.edit(document.getElementById('gs-body'), {
+      sheet: saved, months: months, who: st.staff.name,
+      onSave: async function (sh) {
+        var data = Object.assign({}, sh, { period: pid, email: st.user.email, name: st.staff.name, dept: st.staff.dept, updatedAt: Date.now() });
+        await Store.saveGoalSheet(pid, st.user.email, data); st.sheets[pid] = cur = data;
+      }
+    });
+    document.getElementById('gs-print').onclick = function () { GoalSheet.print(cur || {}, months, st.staff.name, period.label + ' 個人目標シート'); };
+  }
+
+  function renderGoalsMain() {
     var view = document.getElementById('view'), period = periodObj(st.period), g = st.gdoc, ed = goalsEditable();
     var html = '<div class="card"><h2>🎯 ' + esc(period.label) + ' の目標</h2>' +
       '<p class="muted" style="margin:0">目標は、ひとつずつ立てます。まず、いま一番がんばりたい目標をひとつ決めましょう。達成できたら、次の目標を立てられます。毎月の自己評価のときに、進み具合を記録できます。</p>' +

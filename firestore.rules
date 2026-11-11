@@ -5,6 +5,7 @@ rules_version = '2';
 //  ・月次の自己評価(monthlyEvals)は、サーバー時刻（日本時間）が「その月」のあいだだけ入力・提出できる
 //    → 月が変わると、前の月は入力も提出もできない（さかのぼり不可）。提出後は本人は変更不可
 //  ・半年の目標(goals)は、期間が受付中のあいだだけ。「確定」後は、本人は目標を減らせない（次の目標の追加と達成の記録はできる）
+//  ・個人目標シート(goalSheets)は、本人が受付中の期間のあいだ書け、管理者が読める
 //  ・管理者評価(mgrEvals)は、管理者が「公開」するまで本人は読めない
 //  ・提案ボックス(suggestions)は、社員が新規投稿でき、管理者が状態・返事・公開を決める。公開(public)したものは全社員が読める
 //  ・ひとこと返信(replies)は、管理者だけが書ける（300字まで）。本人は自分宛てを読み、既読(readAt)だけ更新できる
@@ -91,6 +92,24 @@ service cloud.firestore {
       allow update: if isAdmin() || (isStaff() && ownerOf(id) && validGoals(id)
         && (resource.data.status != 'fixed'
             || (request.resource.data.status == 'fixed' && request.resource.data.goals.size() >= resource.data.goals.size())));
+      allow delete: if isAdmin();
+    }
+
+    // 個人目標シート：本人が書き（期間が受付中のあいだ）、管理者が読む
+    match /goalSheets/{id} {
+      function validSheet() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['period', 'email', 'name', 'dept', 'group', 'works', 'skills', 'regret', 'good',
+                                 'mindsetWork', 'mindsetCost', 'bonji', 'lifeHome', 'lifeCompany', 'lifeChallenge', 'updatedAt'])
+          && d.period == id.split('__')[0]
+          && d.email == myEmail()
+          && d.works is list && d.works.size() <= 3
+          && d.skills is list && d.skills.size() <= 3
+          && periodOpen(d.period);
+      }
+      allow get: if isAdmin() || (isStaff() && ownerOf(id));
+      allow list: if isAdmin();
+      allow create, update: if isStaff() && ownerOf(id) && validSheet();
       allow delete: if isAdmin();
     }
 

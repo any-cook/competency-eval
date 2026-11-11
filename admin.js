@@ -155,6 +155,7 @@
   /* ---------------- 個別の評価 ---------------- */
   function renderDetail() {
     var v = document.getElementById('view'), email = st.detail, p = periodObj(st.period);
+    var sheetEmail = email, sheetPeriod = st.period;
     var s = st.staffList.filter(function (x) { return x.email === email; })[0];
     var items = itemsOf(s), docs = docsOf(email), goalDoc = st.goalsMap[email] || null, goals = goalDoc ? goalDoc.goals : [];
     var withScores = docs.filter(hasScores);
@@ -206,6 +207,15 @@
     });
     html += '</tbody></table></div><div class="card"><h2>💌 本人へのメッセージ（総評）</h2><textarea id="overall" placeholder="頑張っていること・次に期待することなど。公開すると本人のマイページに表示されます。">' + esc(m.overall || '') + '</textarea></div>';
     v.innerHTML = html;
+    // 個人目標シート（本人が書いたものを読む）
+    var sbox = document.createElement('div'); sbox.id = 'sheet-slot'; v.appendChild(sbox);
+    Store.getGoalSheet(sheetPeriod, sheetEmail).then(function (sh) {
+      var slot = document.getElementById('sheet-slot'); if (!slot || st.detail !== sheetEmail || st.period !== sheetPeriod) return;
+      var months = S.monthRange(p.startYm, p.endYm);
+      if (!sh || GoalSheet.isEmpty(sh)) { slot.innerHTML = '<div class="card"><h2>📝 個人目標シート</h2><p class="muted">本人はまだ書いていません。</p></div>'; return; }
+      slot.innerHTML = '<div class="card"><div class="row"><h2 style="margin:0">📝 個人目標シート</h2><span class="spacer"></span><button class="btn sub small" id="gs-print">🖨 印刷</button></div></div>' + GoalSheet.html(sh, months, true, s.name);
+      document.getElementById('gs-print').onclick = function () { GoalSheet.print(sh, months, s.name, p.label + ' 個人目標シート'); };
+    }).catch(function () { var slot = document.getElementById('sheet-slot'); if (slot) slot.innerHTML = ''; });
 
     var nowDoc = docs.filter(function (d) { return d.ym === st.nowYm; })[0], canReturn = nowDoc && nowDoc.status === 'submitted';
     document.getElementById('dock-slot').innerHTML = '<div class="dock"><div class="in"><div style="flex:1;min-width:140px"><div class="small"><b id="pg-t"></b></div><div class="bar"><i id="pg-b" style="width:0"></i></div></div><span class="save-st" id="save-st"></span>' +

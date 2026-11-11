@@ -114,6 +114,8 @@
     listGoalsByEmail: async function (email) { return mapDocs(await db.collection('goals').where('email', '==', lower(email)).get()); },
     listGoals: async function (period) { return mapDocs(await db.collection('goals').where('period', '==', period).get()); },
     saveGoals: function (period, email, data) { return db.collection('goals').doc(idOf(period, email)).set(data); },
+    getGoalSheet: async function (period, email) { var s = await db.collection('goalSheets').doc(idOf(period, email)).get(); return s.exists ? s.data() : null; },
+    saveGoalSheet: function (period, email, data) { return db.collection('goalSheets').doc(idOf(period, email)).set(data); },
 
     listMgrReleasedByEmail: async function (email) {
       return mapDocs(await db.collection('mgrEvals').where('email', '==', lower(email)).where('released', '==', true).get());
@@ -267,6 +269,16 @@
     },
     listGoalsByEmail: async function (email) { return clone(vals(dload().goals).filter(function (x) { return x.email === lower(email); })); },
     listGoals: async function (period) { return clone(vals(dload().goals).filter(function (x) { return x.period === period; })); },
+    getGoalSheet: async function (period, email) { var d = dload(); return clone((d.sheets || {})[idOf(period, email)] || null); },
+    saveGoalSheet: async function (period, email, data) {
+      var d = dload(), u = curUser();
+      if (!(u && isAdminEmail(d, u.email))) {
+        var per = d.periods.filter(function (p) { return p.id === period; })[0];
+        if (!per || per.status !== 'open') throw denied('受付中の期間ではありません');
+        if (!u || lower(u.email) !== lower(email)) throw denied('自分のシートだけ書けます');
+      }
+      d.sheets = d.sheets || {}; d.sheets[idOf(period, email)] = clone(data); dsave(d);
+    },
     saveGoals: async function (period, email, data) {
       var d = dload(), u = curUser(), id = idOf(period, email), old = d.goals[id];
       if (!(u && isAdminEmail(d, u.email))) {
