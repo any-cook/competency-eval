@@ -298,3 +298,7 @@ body.me .dock { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 20px rgba(238, 
 .gs-tg:disabled { cursor: default; }
 .gnav { display: flex; gap: 8px; margin: 0 0 12px; flex-wrap: wrap; } .gnav button { flex: 1; min-width: 140px; }
 .gnav button.on { background: linear-gradient(135deg,#ff9bb0,#ee6f8f) !important; color: #fff !important; border-color: transparent !important; }
+
+.gs-prog { margin-top: 10px; } .gs-prog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 4px; }
+.gs-pg { border: 1px solid var(--line, #eadfdc); border-radius: 10px; padding: 6px 8px; background: #fff; } .gs-pgh { font-weight: 800; color: var(--pri-d, #c2456a); margin-bottom: 4px; }
+.gs-pgh .small { margin-left: 4px; font-weight: 400; } .gs-pg select { width: 100%; }

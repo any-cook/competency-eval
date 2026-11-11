@@ -7,7 +7,7 @@
 
   var TEXT_KEYS = ['group', 'regret', 'good', 'mindsetWork', 'mindsetCost', 'bonji', 'lifeHome', 'lifeCompany', 'lifeChallenge'];
   function blankRow(kind) {
-    var r = { name: '', purpose: '', detail: '', cls: [false, false, false], plan: {}, act: {} };
+    var r = { name: '', purpose: '', detail: '', prog: [null, null, null], plan: {}, act: {} };
     r[kind === 'work' ? 'date' : 'due'] = '';
     return r;
   }
@@ -27,7 +27,7 @@
         var src = (d[key] || [])[i]; if (!src) continue;
         var r = blankRow(kind);
         ['name', 'purpose', 'detail', 'date', 'due'].forEach(function (f) { if (typeof src[f] === 'string' && f in r) r[f] = src[f]; });
-        if (Array.isArray(src.cls)) r.cls = [!!src.cls[0], !!src.cls[1], !!src.cls[2]];
+        if (Array.isArray(src.prog)) r.prog = [0, 1, 2].map(function (k) { var v = src.prog[k]; return PROG_VALUES.indexOf(v) >= 0 ? v : null; });
         r.plan = src.plan && typeof src.plan === 'object' ? src.plan : {};
         r.act = src.act && typeof src.act === 'object' ? src.act : {};
         s[key][i] = r;
@@ -44,6 +44,7 @@
 
   /* ---- 画面の部品 ---- */
   var CLS = ['Ⅰ', 'Ⅱ', 'Ⅲ'];
+  var PROG_VALUES = [0, 25, 50, 75, 100];
   function field(ro, path, label, val, o) {
     o = o || {};
     var h = '<label class="f">' + esc(label) + '</label>';
@@ -60,20 +61,29 @@
       return '<div class="gs-m"><div class="mm">' + esc(S.monthLabel(ym)) + '</div>' + tg('plan', '計画') + tg('act', '実績') + '</div>';
     }).join('') + '</div>';
   }
-  function clsBox(ro, base, row) {
-    return '<div class="gs-cls"><span class="small muted">区分</span>' + CLS.map(function (c, i) {
-      return '<label class="gs-ck"><input type="checkbox" data-ck="' + base + '.cls.' + i + '"' + (row.cls[i] ? ' checked' : '') + (ro ? ' disabled' : '') + '> ' + c + '</label>';
-    }).join('') + '</div>';
+  /** Ⅰ・Ⅱ・Ⅲ：期ごと（2か月ずつ）に「どこまでできているか」を記録する */
+  function progBox(ro, base, row, months) {
+    return '<div class="gs-prog"><div class="small muted">期ごとの到達度（どこまでできているか）</div><div class="gs-prog-grid">' + CLS.map(function (c, i) {
+      var a = months[i * 2], b = months[i * 2 + 1], v = row.prog[i];
+      var term = esc(c) + '期' + (a ? '<span class="small muted">（' + esc(S.monthLabel(a)) + (b ? '〜' + esc(S.monthLabel(b)) : '') + '）</span>' : '');
+      var opts = '<option value="">—</option>' + PROG_VALUES.map(function (x) {
+        var lb = S.GOAL_PROGRESS.filter(function (g) { return g.v === x; })[0].label;
+        return '<option value="' + x + '"' + (v === x ? ' selected' : '') + '>' + x + '% ' + esc(lb) + '</option>';
+      }).join('');
+      var val = v == null ? '（未入力）' : v + '%　' + S.GOAL_PROGRESS.filter(function (g) { return g.v === v; })[0].label;
+      return '<div class="gs-pg"><div class="gs-pgh">' + term + '</div>' + (ro ? '<div class="gs-ro' + (v == null ? ' empty' : '') + '">' + val + '</div>' : '<select data-pg="' + base + '.prog.' + i + '">' + opts + '</select>') +
+        (ro ? '' : '<div class="bar" style="margin:4px 0 0"><i style="width:' + (v || 0) + '%"></i></div>') + '</div>';
+    }).join('') + '</div></div>';
   }
   function rowCard(ro, key, i, row, months) {
     var work = key === 'works', base = key + '.' + i;
-    return '<div class="gs-row"><div class="row"><b>№ ' + (i + 1) + '</b><span class="spacer"></span>' + clsBox(ro, base, row) + '</div>' +
+    return '<div class="gs-row"><div class="row"><b>№ ' + (i + 1) + '</b></div>' +
       '<div class="grid2">' +
       '<div>' + field(ro, base + '.name', work ? '業務名' : '技術・能力項目', row.name, { max: 60, ph: work ? '例）レトルト充填工程の管理' : '例）殺菌工程の温度管理' }) + '</div>' +
       '<div>' + field(ro, base + (work ? '.date' : '.due'), work ? '実施日' : '期限', work ? row.date : row.due, { max: 40, ph: work ? '例）毎週月曜' : '例）3月末まで' }) + '</div></div>' +
       field(ro, base + '.purpose', work ? '仕事の目的' : '目的', row.purpose, { area: 1, rows: 2, max: 300 }) +
       field(ro, base + '.detail', work ? '仕事の細目及び進め方' : '向上の方法及び進め方', row.detail, { area: 1, rows: 3, max: 500 }) +
-      '<div class="small muted" style="margin-top:8px">' + (work ? '月ごとの計画と実績（タップで●をつけます）' : '月ごとの計画と実績') + '</div>' + monthGrid(ro, base, row, months) + '</div>';
+      '<div class="small muted" style="margin-top:8px">月ごとの計画と実績（タップで●をつけます）</div>' + monthGrid(ro, base, row, months) + progBox(ro, base, row, months) + '</div>';
   }
 
   /** シート全体のHTML。ro=true なら読むだけ */
@@ -130,8 +140,10 @@
       setPath(sheet, p, e.target.value); queue();
     };
     el.onchange = function (e) {
-      var c = e.target.getAttribute && e.target.getAttribute('data-ck'); if (!c) return;
-      setPath(sheet, c, !!e.target.checked); queue();
+      var c = e.target.getAttribute && e.target.getAttribute('data-pg'); if (!c) return;
+      var v = e.target.value === '' ? null : Number(e.target.value);
+      setPath(sheet, c, v); queue();
+      var bar = e.target.parentNode.querySelector('.bar i'); if (bar) bar.style.width = (v || 0) + '%';
     };
     el.onclick = function (e) {
       var b = e.target.closest && e.target.closest('[data-tg]'); if (!b || b.disabled) return;
@@ -151,7 +163,7 @@
       '.f{display:block;font-size:12px;color:#555;margin-top:8px}.gs-ro{white-space:pre-wrap;border-bottom:1px solid #ddd;padding:2px 0;min-height:1.2em}.gs-ro.empty{color:#aaa}' +
       '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.row{display:flex;gap:8px;align-items:center}.spacer{flex:1}.small{font-size:12px}.muted{color:#666}' +
       '.gs-months{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:4px}.gs-m{border:1px solid #ccc;text-align:center;font-size:12px}.gs-m .mm{background:#f2f2f2}' +
-      '.gs-tg{display:block;width:100%;border:0;border-top:1px solid #ddd;background:#fff;font-size:12px;padding:3px}.gs-tg.on{background:#ffe3ea;font-weight:bold}.gs-sub{font-weight:bold;margin:6px 0}' +
+      '.gs-prog-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.gs-pg{border:1px solid #ccc;padding:4px 6px}.gs-pgh{font-weight:bold}.gs-tg{display:block;width:100%;border:0;border-top:1px solid #ddd;background:#fff;font-size:12px;padding:3px}.gs-tg.on{background:#ffe3ea;font-weight:bold}.gs-sub{font-weight:bold;margin:6px 0}' +
       '</style>' + html(sheet, months, true, who) + '<script>window.onload=function(){window.print()}<\/script>');
     w.document.close();
   }
